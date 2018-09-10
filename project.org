@@ -9,13 +9,13 @@ The basic idea is to:
 
 2. measure people's ability to learn these functions
 
-   Using the Martha's Machines paradigm, we'll collect learning curves from 30 subjects for each of our concepts on Mechanical Turk. As per the original experiment, we'll pay participants $1 for 10 trials for each of 5 concepts. We can stick with 10 here because our goal is to identify primitives, which should be quickly learned. Concepts and input/output pairs will be randomly sampled for each participant.
+   Using the Martha's Machines paradigm, we'll collect learning curves from 30 subjects for each of our concepts on Mechanical Turk. As per the original experiment, we'll pay participants $1 for 20 trials for each of 5 concepts. Concepts and input/output pairs will be randomly sampled for each participant.
 
 3. automatically identify the primitives
 
    The basic idea I have for this part of the experiment is to run some automated analysis that uses the learning curves to separate primitive concepts from non-primitive concepts. I had initially thought some sort of clustering analysis would work, but given that we want to consider higher-order functions, the problem is more difficult. I would appreciate suggestions for appropriate analyses.
 
-5. Report our findings
+4. Report our findings
 
    - What are the primitives? any borderline cases?
    - We may want to use a clustering technique within each concept, or at least a sample of concepts, to show that mean learning curves are a good description of the data (no averaging effects). This could used alongside visually plotting distributions (and not just confidence intervals) around the curves.
@@ -173,3 +173,5 @@ The basic idea is to:
 ** other considerations
 - We need to pay special attention to making predicted outputs fast and easy to enter. Making predictions should be as easy as typing a list of digits, perhaps separated by space or tab.
 - Before beginning the experiments, we may want to conduct some sort of power analysis to better justify exactly how many subjects we need.
+** notes
+- wang-landau sampling to explore space more efficiently
