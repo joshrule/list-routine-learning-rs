@@ -157,7 +157,7 @@ fn load_templates(problem_dir: &str, lex: &mut Lexicon) -> io::Result<Vec<RuleCo
 fn initialize_params(args: TOMLArgs, lex: &mut Lexicon) -> io::Result<Params> {
     Ok(Params {
         genetic_params: GeneticParams {
-            max_sample_depth: args.max_sample_depth,
+            max_sample_size: args.max_sample_size,
             n_crosses: args.n_crosses,
             p_add: args.p_add,
             p_keep: args.p_keep,
@@ -303,7 +303,7 @@ mod utils {
         pub generations_per_datum: usize,
         pub problem_dir: String,
         pub deterministic: bool,
-        pub max_sample_depth: usize,
+        pub max_sample_size: usize,
         pub n_crosses: usize,
         pub p_add: f64,
         pub p_keep: f64,
