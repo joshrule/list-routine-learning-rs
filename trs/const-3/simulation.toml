@@ -7,7 +7,7 @@ generations_per_datum = 10
 decay = 0.9
 
 # the location of the data data, DSL, etc.
-problem_dir = "./trs/head"
+problem_dir = "./trs/const-3"
 
 # learned TRSs must be deterministic
 deterministic = true
@@ -32,7 +32,7 @@ atom_weights = [1.0, 1.0, 1.0, 1.0]
 [gp]
 
 # selection occurs by randomly sampling from the current population + offspring without replacement.
-selection = { "drift" = 0.0 }
+selection = "sample"
 
 # maintain a population of 10 individuals
 population_size = 10 

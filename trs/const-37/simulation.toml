@@ -7,7 +7,7 @@ generations_per_datum = 10
 decay = 0.9
 
 # the location of the data data, DSL, etc.
-problem_dir = "./trs/head"
+problem_dir = "./trs/const-37"
 
 # learned TRSs must be deterministic
 deterministic = true
@@ -32,7 +32,7 @@ atom_weights = [1.0, 1.0, 1.0, 1.0]
 [gp]
 
 # selection occurs by randomly sampling from the current population + offspring without replacement.
-selection = { "drift" = 0.0 }
+selection = "sample"
 
 # maintain a population of 10 individuals
 population_size = 10 
@@ -59,7 +59,8 @@ prior = { "SimpleGenerative" = {p_rule = 0.5, atom_weights = [1.0, 1.0, 1.0, 1.0
 #       - p_insertion = weight1/n_chars
 #       - p_incorrect_sub = weight2/n_chars
 #       - p_deletion + weight2 + p_correct_sub = 1.0
-likelihood = { "List" = { t_max = 10, d_max = 10, dist = { beta = 0.005, p_insertion = 0.01, p_deletion = 0.0025, p_incorrect_sub = 0.000025, p_correct_sub = 0.995 }}}
+# likelihood = { "List" = { t_max = 10, d_max = 10, dist = { beta = 0.005, p_insertion = 0.01, p_deletion = 0.0025, p_incorrect_sub = {"Constant" = 0.000025}, p_correct_sub = 0.995 }}}
+likelihood = { "List" = { t_max = 10, d_max = 10, dist = { beta = 0.005, p_insertion = 0.001, p_deletion = 0.0025, p_incorrect_sub = { "Bounded" = { low = 0, high = 99, weight = 0.0025}}, p_correct_sub = 0.995 }}}
 
 # evaluation strategy is normal-order rather than eager, all possible rewrites, string rewriting, etc.
 strategy = "Normal"
@@ -78,4 +79,4 @@ max_depth = 25
 
 # prior and likelihood are equally weighted in the posterior
 p_temp = 1.0
-l_temp = 1.0
+l_temp = 100.0

@@ -3,6 +3,7 @@ CONS: nat -> list -> list;
 NIL: list;
 TAIL: list -> list;
 SINGLETON: nat -> list;
+HEAD: list -> nat;
 0: digit;
 1: digit;
 2: digit;

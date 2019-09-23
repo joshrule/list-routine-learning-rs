@@ -7,7 +7,7 @@ generations_per_datum = 10
 decay = 0.9
 
 # the location of the data data, DSL, etc.
-problem_dir = "./trs/head"
+problem_dir = "./trs/count_head_in_tail"
 
 # learned TRSs must be deterministic
 deterministic = true

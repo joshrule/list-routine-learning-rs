@@ -1,6 +1,7 @@
 C: list -> list;
 CONS: nat -> list -> list;
 NIL: list;
+HEAD: list -> nat;
 TAIL: list -> list;
 SINGLETON: nat -> list;
 0: digit;
