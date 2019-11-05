@@ -1,2 +1,0 @@
-C(NIL) = NIL;
-C(CONS(x_ y_)) = y_;

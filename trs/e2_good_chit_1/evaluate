@@ -1,2 +1,0 @@
-C(NIL) = 0;
-C(x_) = COUNT(HEAD(x_) TAIL(x_));
