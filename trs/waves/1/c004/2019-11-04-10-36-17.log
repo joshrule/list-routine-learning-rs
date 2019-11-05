@@ -1,0 +1,161 @@
+
+Loading parameters
+------------------
+
+Loading lexicon
+---------------
+Signature:
+C/0: list → list
+TRUE/0: bool
+FALSE/0: bool
+NIL/0: list
+CONS/0: nat → list → list
+0/0: digit
+1/0: digit
+2/0: digit
+3/0: digit
+4/0: digit
+5/0: digit
+6/0: digit
+7/0: digit
+8/0: digit
+9/0: digit
+DIGIT/0: digit → nat
+DECC/0: nat → digit → nat
+./2: ∀t1. ∀t2. (t1 → t2) → t1 → t2
+EMPTY/0: list → bool
+EQUAL/0: ∀t0. t0 → t0 → bool
+HEAD/0: list → nat
+IF/0: ∀t0. bool → t0 → t0 → t0
+TAIL/0: list → list
+x_: t6
+y_: t7
+x_: t20
+x_: t30
+y_: t31
+x_: t41
+y_: t42
+x_: t54
+y_: t55
+x_: t68
+y_: t69
+x_: t88
+y_: t89
+
+Background: 9
+EMPTY [] = TRUE
+EMPTY (CONS x_ y_) = FALSE
+EQUAL x_ x_ = TRUE
+EQUAL x_ y_ = FALSE
+HEAD (CONS x_ y_) = x_
+IF TRUE x_ y_ = x_
+IF FALSE x_ y_ = y_
+TAIL [] = []
+TAIL (CONS x_ y_) = y_
+
+Templates: 4
+C (CONS [!] [!]) = [!]
+C [] = [!]
+C [!] = [!]
+[!] = [!]
+
+Deterministic: true
+
+Context { substitution: {}, next: 217 }
+
+Loading data
+------------
+Datum { i: IntList([17, 78, 0, 70, 7, 4, 4, 8, 12, 47]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+Datum { i: IntList([5, 1]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+Datum { i: IntList([3, 42, 28]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+Datum { i: IntList([83]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+Datum { i: IntList([37, 9, 10, 50]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+Datum { i: IntList([]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+Datum { i: IntList([17, 8, 99, 41, 12, 92, 22, 2, 5]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+Datum { i: IntList([65, 4, 13, 65]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+Datum { i: IntList([3, 36, 5]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+Datum { i: IntList([10, 45, 33, 35, 1, 45, 28]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+Datum { i: IntList([17, 4, 23, 6, 8, 8, 3, 56, 1]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+Datum { i: IntList([2, 67, 27, 71, 97, 3, 8]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+Datum { i: IntList([15, 10, 1, 9, 88, 6, 8, 91, 4, 95]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+Datum { i: IntList([3, 1, 5]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+Datum { i: IntList([9, 3, 58, 10, 48, 29, 8, 71, 29, 77]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+Datum { i: IntList([9, 19, 0, 7, 1]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+Datum { i: IntList([4, 24, 54, 48, 12, 0, 49]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+Datum { i: IntList([20]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+Datum { i: IntList([7, 3, 50, 71, 6]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+Datum { i: IntList([55, 1, 6, 2]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+Datum { i: IntList([4, 4, 85, 0]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+Datum { i: IntList([2, 55, 1, 94, 40, 82, 5, 11]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+Datum { i: IntList([22, 10, 10, 18, 65]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+Datum { i: IntList([7, 1, 5, 15, 24]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+Datum { i: IntList([88, 63, 9, 14, 6]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+Datum { i: IntList([1, 2, 5, 3, 80]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+Datum { i: IntList([13, 33, 29]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+Datum { i: IntList([4, 83, 2, 9]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+Datum { i: IntList([33, 8, 0, 17]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+Datum { i: IntList([8, 5, 50, 7, 3, 5, 6]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+Datum { i: IntList([65, 8, 0, 0, 97, 97, 16]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+Datum { i: IntList([4, 3, 52, 71, 6, 9, 55]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+Datum { i: IntList([4, 1, 74, 4, 6, 86]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+Datum { i: IntList([1, 9, 6, 14]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+Datum { i: IntList([48, 9, 3, 26, 61]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+Datum { i: IntList([7]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+Datum { i: IntList([80, 2, 8]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+Datum { i: IntList([89, 8, 57, 3, 17, 3, 2, 2, 6, 5]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+Datum { i: IntList([10]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+Datum { i: IntList([8, 3, 8, 6, 8, 32]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+Datum { i: IntList([74, 3, 6, 8, 61, 2, 3]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+Datum { i: IntList([79, 9, 5, 72, 1, 83, 9, 96, 0]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+Datum { i: IntList([21, 59, 41]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+Datum { i: IntList([0, 22, 40]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+Datum { i: IntList([94, 38, 5, 5, 5, 61]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+Datum { i: IntList([81, 0]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+Datum { i: IntList([2, 23, 3, 8, 85, 48]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+Datum { i: IntList([1, 0, 3, 39, 3, 47, 10, 10, 82]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+Datum { i: IntList([8, 5, 96, 74]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+Datum { i: IntList([26, 10, 1, 1]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+
+Loading H*
+----------
+.(C xs_) = .(.(CONS .(.(DECC .(DIGIT 1)) 1)) .(.(CONS .(.(DECC .(DIGIT 1)) 9)) .(.(CONS .(.(DECC .(DIGIT 2)) 4)) .(.(CONS .(.(DECC .(DIGIT 3)) 3)) .(.(CONS .(.(DECC .(DIGIT 4)) 2)) .(.(CONS .(DIGIT 5)) .(.(CONS .(.(DECC .(DIGIT 8)) 2)) .(.(CONS .(DIGIT 0)) .(.(CONS .(.(DECC .(DIGIT 6)) 4)) .(.(CONS .(DIGIT 9)) NIL))))))))));
+
+Initial Population
+------------------
+0: 7.9780 ".(C var14_) = NIL;"
+1: 7.9780 ".(C var29_) = var29_;"
+2: 11.9670 ".(C var147_) = .(TAIL var147_);"
+3: 14.1293 "C = .(CONS .(DIGIT 6));"
+4: 15.0580 ".(C var205_) = .(TAIL NIL);"
+5: 15.2628 ".(C .(.(CONS var52_) var53_)) = var53_;"
+6: 15.2628 ".(C .(.(CONS var86_) var87_)) = NIL;"
+7: 18.6066 "C = .(.(IF TRUE) .(TAIL NIL));"
+8: 19.9449 ".(C .(.(CONS var491_) var492_)) = .(TAIL var492_);"
+9: 22.3428 ".(C .(.(CONS var133_) var134_)) = .(TAIL NIL);"
+
+Initial Prediction
+------------------
+
+Evolving
+--------
+n_data,generation,rank,nlposterior,h_star_nlposterior,trs
+1,0,0,69.3893,204.1369,".(var580_ var29_) = var29_;"
+1,0,1,70.2002,204.1369,".(C var14_) = NIL;"
+1,0,2,77.2802,204.1369,".(C var205_) = .(TAIL NIL);"
+1,0,3,77.4850,204.1369,".(C .(.(CONS var86_) var87_)) = NIL;"
+1,0,4,80.1456,204.1369,".(var630_ .(.(CONS var52_) var53_)) = var53_;"
+1,0,5,80.8289,204.1369,"C = .(.(IF TRUE) .(TAIL NIL));"
+1,0,6,81.8998,204.1369,".(C .(var623_ var134_)) = .(TAIL NIL);"
+1,0,7,82.8603,204.1369,".(var549_ .(.(CONS var491_) var492_)) = .(TAIL var492_);"
+1,0,8,84.5651,204.1369,".(C .(.(CONS var133_) var134_)) = .(TAIL NIL);"
+1,0,9,85.1957,204.1369,".(var621_ .(.(CONS var133_) var134_)) = .(TAIL NIL);"
+1,1,0,69.3893,204.1369,".(var580_ var29_) = var29_;"
+1,1,1,70.2002,204.1369,".(C var14_) = NIL;"
+1,1,2,74.4197,204.1369,".(C .(var623_ var134_)) = NIL;"
+1,1,3,77.2802,204.1369,".(C var205_) = .(TAIL NIL);"
+1,1,4,77.4850,204.1369,".(C .(.(CONS var86_) var87_)) = NIL;"
+1,1,5,77.7156,204.1369,".(var549_ .(.(CONS var491_) var492_)) = NIL;"
+1,1,6,77.7156,204.1369,".(var549_ .(var887_ var492_)) = .(TAIL var492_);"
+1,1,7,80.1456,204.1369,".(var630_ .(.(CONS var52_) var53_)) = var53_;"
+1,1,8,80.4671,204.1369,".(var621_ .(var898_ var134_)) = .(TAIL NIL);"
+1,1,9,81.8998,204.1369,".(C .(var623_ var134_)) = .(TAIL NIL);"

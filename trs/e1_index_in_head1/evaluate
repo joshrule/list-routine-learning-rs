@@ -1,2 +1,0 @@
-C(CONS(DIGIT(1) y_)) = DIGIT(1);
-C(CONS(x_ y_)) = NTH(MINUS(x_ DIGIT(2)) y_);

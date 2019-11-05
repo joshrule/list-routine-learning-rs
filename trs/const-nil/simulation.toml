@@ -3,16 +3,16 @@
 # perform 10 generations of evolutionary search for each new datum 
 generations_per_datum = 10
 
-# p(example i, i < n, being in the likelihood before seeing example n) = decay^(n-1 - i)
+# p(example i, i < n, being in the likelihood for trial n) = 0.9^(n-1 - i)
 decay = 0.9
 
-# the location of the data data, DSL, etc.
+# the location of the data, DSL, etc.
 problem_dir = "./trs/const-nil"
 
 # learned TRSs must be deterministic
 deterministic = true
 
-# learn from 20 examples
+# learn from 20 examples or less
 n_examples = 20
 
 [genetic]
@@ -41,25 +41,15 @@ population_size = 10
 tournament_size = 3
 
 # mutate 95% of the time, cross 5% of the time
-mutation_prob = 0.95
+weights = { mutation = 18, crossover = 1, abiogenesis = 1 }
 
 # generate 90 new offspring during each generation
-n_delta = 90
+n_delta = 100
 
 [model]
 
 # the prior is generative: sample the number of rules and then sample each rule up to that number.
 prior = { "SimpleGenerative" = {p_rule = 0.5, atom_weights = [1.0, 1.0, 1.0, 1.0]}}
-
-# the likelihood is generative: rewrite the observed input according to your
-# hypothesis and scale the probability of each computed output by the cost of
-# probabilistically corrupting it into the observed output.
-#
-# NOTE: It's annoying, but you need to manually normalize the parameters so that:
-#       - p_insertion = weight1/n_chars
-#       - p_incorrect_sub = weight2/n_chars
-#       - p_deletion + weight2 + p_correct_sub = 1.0
-likelihood = { "List" = { t_max = 10, d_max = 10, dist = { beta = 0.005, p_insertion = 0.01, p_deletion = 0.0025, p_incorrect_sub = 0.000025, p_correct_sub = 0.995 }}}
 
 # evaluation strategy is normal-order rather than eager, all possible rewrites, string rewriting, etc.
 strategy = "Normal"
@@ -79,3 +69,14 @@ max_depth = 25
 # prior and likelihood are equally weighted in the posterior
 p_temp = 1.0
 l_temp = 1.0
+
+# the likelihood is generative: rewrite the observed input according to your
+# hypothesis and scale the probability of each computed output by the cost of
+# probabilistically corrupting it into the observed output.
+#
+# NOTE: It's annoying, but you need to manually normalize the parameters so that:
+#       - p_insertion = weight1/n_chars
+#       - p_incorrect_sub = weight2/n_chars
+#       - p_deletion + weight2 + p_correct_sub = 1.0
+# likelihood = { "List" = { t_max = 10, d_max = 10, dist = { beta = 0.005, p_insertion = 0.01, p_deletion = 0.0025, p_incorrect_sub = {"Constant" = 0.000025}, p_correct_sub = 0.995 }}}
+likelihood = { "List" = { t_max = 10, d_max = 10, dist = { beta = 0.005, p_insertion = 0.001, p_deletion = 0.0025, p_incorrect_sub = { "Bounded" = { low = 0, high = 99, weight = 0.0025}}, p_correct_sub = 0.995 }}}

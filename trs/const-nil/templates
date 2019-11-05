@@ -1,6 +1,6 @@
-C(CONS([!] [!])) = SINGLETON([!]);
-C([!]) = SINGLETON([!]);
-C(CONS([!] [!])) = [!];
-C(NIL) = [!];
-C([!]) = [!];
+C (CONS [!] [!]) = SINGLETON [!];
+C [!] = SINGLETON [!];
+C (CONS [!] [!]) = [!];
+C NIL = [!];
+C [!] = [!];
 [!] = [!];

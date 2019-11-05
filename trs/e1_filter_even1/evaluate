@@ -1,2 +1,0 @@
-C(NIL) = NIL;
-C(CONS(x_ y_)) = IF(EVEN(x_) CONS(x_ C(y_)) C(y_));

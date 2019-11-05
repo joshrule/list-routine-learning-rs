@@ -1,2 +1,0 @@
-C(NIL) = DIGIT(0);
-C(CONS(x_ y_)) = PLUS(DIGIT(1) C(y_));

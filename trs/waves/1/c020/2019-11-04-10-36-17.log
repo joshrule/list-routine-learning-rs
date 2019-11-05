@@ -1,0 +1,242 @@
+
+Loading parameters
+------------------
+
+Loading lexicon
+---------------
+Signature:
+C/0: list → list
+TRUE/0: bool
+FALSE/0: bool
+NIL/0: list
+CONS/0: nat → list → list
+0/0: digit
+1/0: digit
+2/0: digit
+3/0: digit
+4/0: digit
+5/0: digit
+6/0: digit
+7/0: digit
+8/0: digit
+9/0: digit
+DIGIT/0: digit → nat
+DECC/0: nat → digit → nat
+./2: ∀t1. ∀t2. (t1 → t2) → t1 → t2
+EMPTY/0: list → bool
+EQUAL/0: ∀t0. t0 → t0 → bool
+HEAD/0: list → nat
+IF/0: ∀t0. bool → t0 → t0 → t0
+TAIL/0: list → list
+x_: t6
+y_: t7
+x_: t20
+x_: t30
+y_: t31
+x_: t41
+y_: t42
+x_: t54
+y_: t55
+x_: t68
+y_: t69
+x_: t88
+y_: t89
+
+Background: 9
+EMPTY [] = TRUE
+EMPTY (CONS x_ y_) = FALSE
+EQUAL x_ x_ = TRUE
+EQUAL x_ y_ = FALSE
+HEAD (CONS x_ y_) = x_
+IF TRUE x_ y_ = x_
+IF FALSE x_ y_ = y_
+TAIL [] = []
+TAIL (CONS x_ y_) = y_
+
+Templates: 4
+C (CONS [!] [!]) = [!]
+C [] = [!]
+C [!] = [!]
+[!] = [!]
+
+Deterministic: true
+
+Context { substitution: {}, next: 217 }
+
+Loading data
+------------
+Datum { i: IntList([2, 2]), o: IntList([2]) }
+Datum { i: IntList([13]), o: IntList([13, 13]) }
+Datum { i: IntList([38]), o: IntList([38, 38]) }
+Datum { i: IntList([0, 0]), o: IntList([0]) }
+Datum { i: IntList([20, 20]), o: IntList([20]) }
+Datum { i: IntList([47]), o: IntList([47, 47]) }
+Datum { i: IntList([45]), o: IntList([45, 45]) }
+Datum { i: IntList([8, 8]), o: IntList([8]) }
+Datum { i: IntList([6]), o: IntList([6, 6]) }
+Datum { i: IntList([97]), o: IntList([97, 97]) }
+Datum { i: IntList([87]), o: IntList([87, 87]) }
+Datum { i: IntList([7]), o: IntList([7, 7]) }
+Datum { i: IntList([4, 4]), o: IntList([4]) }
+Datum { i: IntList([3, 3]), o: IntList([3]) }
+Datum { i: IntList([99, 99]), o: IntList([99]) }
+Datum { i: IntList([7, 7]), o: IntList([7]) }
+Datum { i: IntList([13, 13]), o: IntList([13]) }
+Datum { i: IntList([12, 12]), o: IntList([12]) }
+Datum { i: IntList([88]), o: IntList([88, 88]) }
+Datum { i: IntList([10]), o: IntList([10, 10]) }
+Datum { i: IntList([2]), o: IntList([2, 2]) }
+Datum { i: IntList([10, 10]), o: IntList([10]) }
+Datum { i: IntList([58, 58]), o: IntList([58]) }
+Datum { i: IntList([63, 63]), o: IntList([63]) }
+Datum { i: IntList([5]), o: IntList([5, 5]) }
+Datum { i: IntList([6, 6]), o: IntList([6]) }
+Datum { i: IntList([4]), o: IntList([4, 4]) }
+Datum { i: IntList([0]), o: IntList([0, 0]) }
+Datum { i: IntList([5, 5]), o: IntList([5]) }
+Datum { i: IntList([43, 43]), o: IntList([43]) }
+Datum { i: IntList([1, 1]), o: IntList([1]) }
+Datum { i: IntList([73]), o: IntList([73, 73]) }
+Datum { i: IntList([89]), o: IntList([89, 89]) }
+Datum { i: IntList([16]), o: IntList([16, 16]) }
+Datum { i: IntList([50, 50]), o: IntList([50]) }
+Datum { i: IntList([55, 55]), o: IntList([55]) }
+Datum { i: IntList([67]), o: IntList([67, 67]) }
+Datum { i: IntList([81]), o: IntList([81, 81]) }
+Datum { i: IntList([71, 71]), o: IntList([71]) }
+Datum { i: IntList([9, 9]), o: IntList([9]) }
+Datum { i: IntList([73, 73]), o: IntList([73]) }
+Datum { i: IntList([17]), o: IntList([17, 17]) }
+Datum { i: IntList([96, 96]), o: IntList([96]) }
+Datum { i: IntList([3]), o: IntList([3, 3]) }
+Datum { i: IntList([88, 88]), o: IntList([88]) }
+Datum { i: IntList([41, 41]), o: IntList([41]) }
+Datum { i: IntList([77]), o: IntList([77, 77]) }
+Datum { i: IntList([69]), o: IntList([69, 69]) }
+Datum { i: IntList([53, 53]), o: IntList([53]) }
+Datum { i: IntList([68]), o: IntList([68, 68]) }
+
+Loading H*
+----------
+.(C .(.(CONS x_) NIL)) = .(.(CONS x_) .(.(CONS x_) NIL));
+.(C .(.(CONS x_) .(.(CONS x_) NIL))) = .(.(CONS x_) NIL);
+
+Initial Population
+------------------
+0: 4.5643 "C = TAIL;"
+1: 7.9780 ".(C var22_) = NIL;"
+2: 7.9780 ".(C var28_) = var28_;"
+3: 11.9670 ".(C var118_) = .(TAIL var118_);"
+4: 15.0231 "C = .(.(IF TRUE) NIL);"
+5: 15.0580 ".(C var83_) = .(TAIL NIL);"
+6: 15.2628 ".(C .(.(CONS var18_) var19_)) = var19_;"
+7: 15.2628 ".(C .(.(CONS var56_) var57_)) = NIL;"
+8: 19.6572 ".(C .(.(CONS .(DIGIT var241_)) var242_)) = NIL;"
+9: 21.7326 ".(C var576_) = .(.(.(IF FALSE) var576_) NIL);"
+
+Initial Prediction
+------------------
+
+Evolving
+--------
+n_data,generation,rank,nlposterior,h_star_nlposterior,trs
+1,0,0,4.5744,64.6365,"C = TAIL;"
+1,0,1,11.8592,64.6365,".(C .(var796_ var19_)) = var19_;"
+1,0,2,11.9770,64.6365,".(C var118_) = .(TAIL var118_);"
+1,0,3,13.1635,64.6365,".(var994_ var28_) = var28_;"
+1,0,4,13.9744,64.6365,".(C var22_) = NIL;"
+1,0,5,15.1550,64.6365,".(C .(.(var797_ var18_) var19_)) = var19_;"
+1,0,6,15.1550,64.6365,".(var794_ .(.(CONS var18_) var19_)) = var19_;"
+1,0,7,15.2728,64.6365,".(C .(.(CONS var18_) var19_)) = var19_;"
+1,0,8,17.1525,64.6365,".(C .(var602_ var242_)) = NIL;"
+1,0,9,20.4483,64.6365,".(C .(.(var682_ var56_) var57_)) = NIL;"
+1,1,0,4.5744,64.6365,"C = TAIL;"
+1,1,1,11.8592,64.6365,".(C .(var796_ var19_)) = var19_;"
+1,1,2,11.9770,64.6365,".(C var118_) = .(TAIL var118_);"
+1,1,3,12.4704,64.6365,".(var1375_ var22_) = NIL;"
+1,1,4,13.1635,64.6365,".(var994_ var28_) = var28_;"
+1,1,5,13.7687,64.6365,".(var794_ .(.(var1139_ var18_) var19_)) = var19_;"
+1,1,6,13.9744,64.6365,".(C var22_) = NIL;"
+1,1,7,15.0731,64.6365,".(var1052_ .(var602_ var242_)) = NIL;"
+1,1,8,15.1550,64.6365,".(C .(.(var797_ var18_) var19_)) = var19_;"
+1,1,9,15.1550,64.6365,".(var794_ .(.(CONS var18_) var19_)) = var19_;"
+1,2,0,4.5744,64.6365,"C = TAIL;"
+1,2,1,11.8592,64.6365,".(C .(var796_ var19_)) = var19_;"
+1,2,2,11.9770,64.6365,".(C var118_) = .(TAIL var118_);"
+1,2,3,12.4704,64.6365,".(var1375_ var22_) = NIL;"
+1,2,4,13.1635,64.6365,".(var994_ var28_) = var28_;"
+1,2,5,13.9744,64.6365,".(C var22_) = NIL;"
+1,2,6,15.0731,64.6365,".(var1052_ .(var602_ var242_)) = NIL;"
+1,2,7,15.1550,64.6365,".(C .(.(var797_ var18_) var19_)) = var19_;"
+1,2,8,15.1550,64.6365,".(var794_ .(.(CONS var18_) var19_)) = var19_;"
+1,2,9,15.8482,64.6365,".(C .(.(CONS var18_) var19_)) = var19_;"
+1,3,0,4.5744,64.6365,"C = TAIL;"
+1,3,1,11.8592,64.6365,".(C .(var796_ var19_)) = var19_;"
+1,3,2,11.9770,64.6365,".(C var118_) = .(TAIL var118_);"
+1,3,3,12.4704,64.6365,".(var1375_ var22_) = NIL;"
+1,3,4,13.1635,64.6365,".(var994_ var28_) = var28_;"
+1,3,5,13.7687,64.6365,".(var2680_ .(.(var797_ var18_) var19_)) = var19_;"
+1,3,6,13.9744,64.6365,".(C var22_) = NIL;"
+1,3,7,14.9961,64.6365,".(var1052_ NIL) = NIL;"
+1,3,8,15.0731,64.6365,".(var1052_ .(var602_ var242_)) = NIL;"
+1,3,9,15.1550,64.6365,".(C .(.(var797_ var18_) var19_)) = var19_;"
+1,4,0,4.5744,64.6365,"C = TAIL;"
+1,4,1,11.8592,64.6365,".(C .(var796_ var19_)) = var19_;"
+1,4,2,11.9770,64.6365,".(C var118_) = .(TAIL var118_);"
+1,4,3,12.4704,64.6365,".(var1375_ var22_) = NIL;"
+1,4,4,13.1635,64.6365,".(var994_ var28_) = var28_;"
+1,4,5,13.7687,64.6365,".(var2680_ .(.(var797_ var18_) var19_)) = var19_;"
+1,4,6,13.9744,64.6365,".(C var22_) = NIL;"
+1,4,7,14.9961,64.6365,".(var1052_ NIL) = NIL;"
+1,4,8,15.1550,64.6365,".(C .(.(var797_ var18_) var19_)) = var19_;"
+1,4,9,15.4427,64.6365,".(var2680_ .(.(CONS var18_) var19_)) = var19_;"
+1,5,0,4.5744,64.6365,"C = TAIL;"
+1,5,1,11.8592,64.6365,".(C .(var796_ var19_)) = var19_;"
+1,5,2,11.9770,64.6365,".(C var118_) = .(TAIL var118_);"
+1,5,3,12.4704,64.6365,".(var1375_ var22_) = NIL;"
+1,5,4,13.1635,64.6365,".(var994_ var28_) = var28_;"
+1,5,5,13.7687,64.6365,".(var2680_ .(.(var797_ var18_) var19_)) = var19_;"
+1,5,6,13.9744,64.6365,".(C var22_) = NIL;"
+1,5,7,14.9961,64.6365,".(var1052_ NIL) = NIL;"
+1,5,8,15.1550,64.6365,".(C .(.(var797_ var18_) var19_)) = var19_;"
+1,5,9,15.4427,64.6365,".(var2680_ .(.(CONS var18_) var19_)) = var19_;"
+1,6,0,4.5744,64.6365,"C = TAIL;"
+1,6,1,11.8592,64.6365,".(C .(var796_ var19_)) = var19_;"
+1,6,2,11.9770,64.6365,".(C var118_) = .(TAIL var118_);"
+1,6,3,12.4704,64.6365,".(var1375_ var22_) = NIL;"
+1,6,4,13.1635,64.6365,".(var994_ var28_) = var28_;"
+1,6,5,13.7687,64.6365,".(var2680_ .(.(var797_ var18_) var19_)) = var19_;"
+1,6,6,13.9744,64.6365,".(C var22_) = NIL;"
+1,6,7,14.9961,64.6365,".(var1052_ NIL) = NIL;"
+1,6,8,15.1550,64.6365,".(C .(.(var797_ var18_) var19_)) = var19_;"
+1,6,9,15.4427,64.6365,".(var2680_ .(.(CONS var18_) var19_)) = var19_;"
+1,7,0,4.5744,64.6365,"C = TAIL;"
+1,7,1,11.8592,64.6365,".(C .(var796_ var19_)) = var19_;"
+1,7,2,11.9770,64.6365,".(C var118_) = .(TAIL var118_);"
+1,7,3,12.4704,64.6365,".(var1375_ var22_) = NIL;"
+1,7,4,13.1635,64.6365,".(var994_ var28_) = var28_;"
+1,7,5,13.7687,64.6365,".(var2680_ .(.(var797_ var18_) var19_)) = var19_;"
+1,7,6,13.9744,64.6365,".(C var22_) = NIL;"
+1,7,7,14.9961,64.6365,".(var1052_ NIL) = NIL;"
+1,7,8,15.1550,64.6365,".(C .(.(var797_ var18_) var19_)) = var19_;"
+1,7,9,15.4427,64.6365,".(var2680_ .(.(CONS var18_) var19_)) = var19_;"
+1,8,0,4.5744,64.6365,"C = TAIL;"
+1,8,1,11.8592,64.6365,".(C .(var796_ var19_)) = var19_;"
+1,8,2,11.9770,64.6365,".(C var118_) = .(TAIL var118_);"
+1,8,3,12.4704,64.6365,".(var1375_ var22_) = NIL;"
+1,8,4,13.1635,64.6365,".(var994_ var28_) = var28_;"
+1,8,5,13.7687,64.6365,".(var2680_ .(.(var797_ var18_) var19_)) = var19_;"
+1,8,6,13.9744,64.6365,".(C var22_) = NIL;"
+1,8,7,14.9961,64.6365,".(var1052_ NIL) = NIL;"
+1,8,8,15.1550,64.6365,".(C .(.(var797_ var18_) var19_)) = var19_;"
+1,8,9,21.0494,64.6365,".(C .(.(var797_ .(DIGIT var7102_)) var19_)) = var19_;"
+1,9,0,4.5744,64.6365,"C = TAIL;"
+1,9,1,11.8592,64.6365,".(C .(var796_ var19_)) = var19_;"
+1,9,2,11.9770,64.6365,".(C var118_) = .(TAIL var118_);"
+1,9,3,12.4704,64.6365,".(var1375_ var22_) = NIL;"
+1,9,4,13.1635,64.6365,".(var994_ var28_) = var28_;"
+1,9,5,13.7687,64.6365,".(var2680_ .(.(var797_ var18_) var19_)) = var19_;"
+1,9,6,13.9744,64.6365,".(C var22_) = NIL;"
+1,9,7,15.1550,64.6365,".(C .(.(var797_ var18_) var19_)) = var19_;"
+1,9,8,15.8482,64.6365,".(var2680_ .(.(CONS var18_) var19_)) = var19_;"
+1,9,9,17.2345,64.6365,".(C .(.(CONS var18_) var19_)) = var19_;"
