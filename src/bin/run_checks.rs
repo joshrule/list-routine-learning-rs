@@ -68,9 +68,9 @@ fn main() {
 
         start_section("Testing Probabilistic Model");
         test_logprior(&mut lex, &params);
-        println!("");
+        println!();
         test_loglikelihood(&mut lex, &params);
-        println!("");
+        println!();
         test_h_star(&h_star, &params, &data[0..1]);
 
         if false {

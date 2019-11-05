@@ -132,10 +132,7 @@ impl Value {
             },
         };
         if let Some(op) = lhs {
-            let op_term = Term::Application {
-                op: op.clone(),
-                args: vec![],
-            };
+            let op_term = Term::Application { op, args: vec![] };
             Ok(Term::Application {
                 op: lex.has_op(Some("."), 2)?,
                 args: vec![op_term, base_term],
@@ -159,15 +156,15 @@ impl Value {
         };
         for t in ts {
             let cons_term = Term::Application {
-                op: cons.clone(),
+                op: cons,
                 args: vec![],
             };
             let inner_term = Term::Application {
-                op: app.clone(),
+                op: app,
                 args: vec![cons_term, t],
             };
             term = Term::Application {
-                op: app.clone(),
+                op: app,
                 args: vec![inner_term, term],
             };
         }
@@ -198,7 +195,7 @@ impl Value {
                 };
                 let num_term = Value::num_to_term(lex, num / 10)?;
                 let inner_term = Term::Application {
-                    op: app.clone(),
+                    op: app,
                     args: vec![decc_term, num_term],
                 };
                 let digit_term = Term::Application {
