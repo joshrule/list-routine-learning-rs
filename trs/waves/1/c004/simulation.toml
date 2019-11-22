@@ -13,7 +13,7 @@ problem_dir = "./trs/waves/1/c004"
 deterministic = true
 
 # learn from 20 examples or less
-n_examples = 20
+n_examples = 10
 
 [genetic]
 
@@ -32,7 +32,10 @@ atom_weights = [1.0, 1.0, 1.0, 1.0]
 [gp]
 
 # selection occurs by randomly sampling from the current population + offspring without replacement.
-selection = "sample"
+selection = "deterministic"
+
+# speciation should create 100 new individuals
+species_size = 500
 
 # maintain a population of 10 individuals
 population_size = 10 
@@ -41,10 +44,10 @@ population_size = 10
 tournament_size = 3
 
 # mutate 95% of the time, cross 5% of the time
-weights = { mutation = 18, crossover = 1, abiogenesis = 1 }
+weights = { mutation = 20, crossover = 2, abiogenesis = 1 }
 
 # generate 90 new offspring during each generation
-n_delta = 100
+n_delta = 500
 
 [model]
 
@@ -61,13 +64,13 @@ p_observe= 0.0
 max_steps = 25
 
 # terms in an evaluation trace have 110 subterms or less
-max_size = 110 
+max_size = 200 
 
 # evaluation traces have depth 25 or less
 max_depth = 25
 
 # prior and likelihood are equally weighted in the posterior
-p_temp = 1.0
+p_temp = 0.01
 l_temp = 1.0
 
 # the likelihood is generative: rewrite the observed input according to your

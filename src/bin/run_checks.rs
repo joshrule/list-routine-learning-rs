@@ -101,7 +101,7 @@ fn load_data(problem_dir: &str) -> Result<Vec<Datum>, String> {
 
 fn identify_concept(lex: &Lexicon) -> Result<Operator, String> {
     str_err(
-        lex.has_op(Some("C"), 1)
+        lex.has_op(Some("C"), 0)
             .or_else(|_| Err(String::from("No target concept"))),
     )
 }
