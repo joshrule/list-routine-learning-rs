@@ -68,6 +68,15 @@ fn main() {
     );
     println!("{}", h_star);
 
+    {
+        let sig = lex.signature();
+        let operators = sig.operators();
+        println!(
+            "operators: [{}]",
+            operators.iter().map(|o| o.display(&sig)).join(", ")
+        )
+    }
+
     start_section("Initial Population");
     let mut pop = exit_err(
         initialize_population(&lex, &params, rng, &data[0].lhs),
@@ -82,6 +91,7 @@ fn main() {
     let prediction = make_prediction(&pop, &data[0].lhs, &params);
     predictions.push((
         (prediction == data[0].rhs().unwrap()) as usize,
+        pop.len(),
         data[0].lhs.pretty(&lex.signature()),
         prediction.pretty(&lex.signature()),
         data[0].rhs[0].pretty(&lex.signature()),
@@ -109,11 +119,11 @@ fn main() {
         );
     }
     println!();
-    println!("n,accuracy,input,output,prediction");
-    for (n, (accuracy, input, prediction, output)) in predictions.iter().enumerate() {
+    println!("n,n_seen,accuracy,input,output,prediction");
+    for (n, (accuracy, n_seen, input, prediction, output)) in predictions.iter().enumerate() {
         println!(
-            "{},{},\"{}\",\"{}\",\"{}\"",
-            n, accuracy, input, output, prediction
+            "{},{},{},\"{}\",\"{}\",\"{}\"",
+            n, n_seen, accuracy, input, output, prediction
         );
     }
     println!();
@@ -184,7 +194,7 @@ fn initialize_population<R: Rng>(
                 .iter()
                 .map(|x| {
                     //let mut sig = Signature::default();
-                    let sig = lex.signature();
+                    let sig = lex.signature().deep_copy();
                     if UntypedTRS::convert_list_to_string(&x.term(), &sig).is_some() {
                         x.log_p()
                     } else {
@@ -241,7 +251,7 @@ fn make_prediction(pop: &[(TRS, f64)], input: &Term, params: &Params) -> Term {
 
 fn evolve<R: Rng>(
     data: &[Rule],
-    predictions: &mut Vec<(usize, String, String, String)>,
+    predictions: &mut Vec<(usize, usize, String, String, String)>,
     pop: &mut Vec<(TRS, f64)>,
     h_star: &TRS,
     lex: &Lexicon,
@@ -249,6 +259,13 @@ fn evolve<R: Rng>(
     rng: &mut R,
 ) -> Result<(), String> {
     println!("n_data,generation,rank,nlposterior,h_star_nlposterior,trs");
+    let max_op = lex
+        .signature()
+        .operators()
+        .into_iter()
+        .map(|o| o.id())
+        .max()
+        .unwrap();
     for n_data in 1..data.len() {
         let examples = {
             let mut exs = vec![];
@@ -270,10 +287,20 @@ fn evolve<R: Rng>(
         for i in pop.iter_mut() {
             i.1 = (task.oracle)(lex, &i.0);
         }
+        pop.sort_by(|x, y| x.1.partial_cmp(&y.1).unwrap_or(std::cmp::Ordering::Equal));
         let h_star_lpost = (task.oracle)(lex, h_star);
+        let mut seen = vec![];
 
         for gen in 0..params.simulation.generations_per_datum {
-            lex.evolve(&params.genetic, rng, &params.gp, &task, pop);
+            let mut used_symbols = pop
+                .iter()
+                .flat_map(|p| p.0.utrs().operators())
+                .map(|o| o.id())
+                .collect_vec();
+            used_symbols.push(max_op);
+            let n = lex.contract(&used_symbols);
+            println!("max: {}", n);
+            lex.evolve(&params.genetic, rng, &params.gp, &task, &mut seen, pop);
             for (i, (h, lpost)) in pop.iter().enumerate() {
                 println!(
                     "{},{},{},{:.4},{:.4},{:?}",
@@ -281,14 +308,27 @@ fn evolve<R: Rng>(
                     gen,
                     i,
                     lpost,
-                    h_star_lpost,
+                    lpost - h_star_lpost,
                     h.to_string(),
                 );
             }
         }
+        // lex.speciate(&params.genetic, rng, &params.gp, &task, pop);
+        // for (i, (h, lpost)) in pop.iter().enumerate() {
+        //     println!(
+        //         "{},{},{},{:.4},{:.4},{:?}",
+        //         n_data,
+        //         0,
+        //         i,
+        //         lpost,
+        //         h_star_lpost,
+        //         h.to_string(),
+        //     );
+        // }
         let prediction = make_prediction(pop, input, params);
         predictions.push((
             (prediction == *output) as usize,
+            seen.len(),
             input.pretty(&lex.signature()),
             prediction.pretty(&lex.signature()),
             output.pretty(&lex.signature()),
