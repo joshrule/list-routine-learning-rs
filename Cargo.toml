@@ -24,6 +24,6 @@ term_rewriting = "0.7"
 toml = "0.5"
 
 [patch.crates-io]
-programinduction = { path = "../../../program-induction" }
-term_rewriting = { path = "../../../term-rewriting-rs" }
-polytype = { path = "../../../polytype-rs" }
+programinduction = { path = "../program-induction" }
+term_rewriting = { path = "../term-rewriting-rs" }
+polytype = { path = "../polytype-rs" }
