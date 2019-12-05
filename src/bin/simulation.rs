@@ -299,7 +299,6 @@ fn evolve<R: Rng>(
                 .collect_vec();
             used_symbols.push(max_op);
             let n = lex.contract(&used_symbols);
-            println!("max: {}", n);
             lex.evolve(&params.genetic, rng, &params.gp, &task, &mut seen, pop);
             for (i, (h, lpost)) in pop.iter().enumerate() {
                 println!(
