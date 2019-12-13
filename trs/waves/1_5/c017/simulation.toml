@@ -1,0 +1,96 @@
+[simulation]
+
+# perform 10 generations of evolutionary search for each new datum 
+generations_per_datum = 10
+
+# p(example i, i < n, being in the likelihood for trial n) = 0.9^(n-1 - i)
+decay = 0.9
+
+# the location of the data, DSL, etc.
+problem_dir = "./trs/waves/1_5/c017"
+
+# learned TRSs must be deterministic
+deterministic = true
+
+# learn from 20 examples or less
+n_examples = 20
+
+# scale up or down 2/3 based on past performance
+confidence = 0.666666666666667
+
+[genetic]
+
+# sampled terms can have at most 10 subterms
+max_sample_size = 10 
+
+# equally weight existing variables, operators with arity 0, operators with arity > 0, and invented variables
+atom_weights = [1.0, 1.0, 1.0, 1.0]
+
+moves = [
+    {weight = 4, mv = { "SampleRule"        = { 0 = [1.0, 1.0, 1.0, 1.0], 1 = 10 }}},
+    {weight = 4, mv = { "RegenerateRule"    = { 0 = [1.0, 1.0, 1.0, 1.0], 1 = 10 }}},
+    {weight = 2, mv = { "Recurse"           =   20 }},
+    {weight = 2, mv = { "RecurseVariablize" =   3  }},
+    {weight = 2, mv = { "RecurseGeneralize" =   20 }},
+    {weight = 1, mv =   "Memorize"    },
+    {weight = 2, mv =   "MemorizeOne" },
+    {weight = 4, mv =   "Variablize"  },
+    {weight = 4, mv =   "Generalize"  },
+    {weight = 2, mv =   "Combine"     },
+    {weight = 2, mv =   "DeleteRules" },
+    ]
+
+[gp]
+
+# selection occurs by randomly sampling from the current population + offspring without replacement.
+selection = "deterministic"
+
+# speciation should create 100 new individuals
+species_size = 500
+
+# maintain a population of 10 individuals
+population_size = 10 
+
+# to find a parent, randomly select 3 from the existing population, then choose the best of those.
+tournament_size = 3
+
+# mutate 95% of the time, cross 5% of the time
+weights = { mutation = 20, crossover = 2, abiogenesis = 1 }
+
+# generate 90 new offspring during each generation
+n_delta = 500
+
+[model]
+
+# the prior is generative: sample the number of rules and then sample each rule up to that number.
+prior = { "SimpleGenerative" = {p_rule = 0.5, atom_weights = [1.0, 1.0, 1.0, 1.0]}}
+
+# evaluation strategy is normal-order rather than eager, all possible rewrites, string rewriting, etc.
+strategy = "Normal"
+
+# nodes which are not leaves in an evaluation trace have probability 0.0
+p_observe= 0.0
+
+# evaluation traces have 25 steps or less
+max_steps = 25
+
+# terms in an evaluation trace have 110 subterms or less
+max_size = 200 
+
+# evaluation traces have depth 25 or less
+max_depth = 25
+
+# prior and likelihood are equally weighted in the posterior
+p_temp = 0.01
+l_temp = 1.0
+
+# the likelihood is generative: rewrite the observed input according to your
+# hypothesis and scale the probability of each computed output by the cost of
+# probabilistically corrupting it into the observed output.
+#
+# NOTE: It's annoying, but you need to manually normalize the parameters so that:
+#       - p_insertion = weight1/n_chars
+#       - p_incorrect_sub = weight2/n_chars
+#       - p_deletion + weight2 + p_correct_sub = 1.0
+# likelihood = { "List" = { t_max = 10, d_max = 10, dist = { beta = 0.005, p_insertion = 0.01, p_deletion = 0.0025, p_incorrect_sub = {"Constant" = 0.000025}, p_correct_sub = 0.995 }}}
+likelihood = { "List" = { t_max = 10, d_max = 10, dist = { beta = 0.005, p_insertion = 0.001, p_deletion = 0.0025, p_incorrect_sub = { "Bounded" = { low = 0, high = 99, weight = 0.0025}}, p_correct_sub = 0.995 }}}
