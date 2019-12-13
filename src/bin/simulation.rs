@@ -11,7 +11,7 @@ use docopt::Docopt;
 use itertools::Itertools;
 use list_routine_learning_rs::*;
 use programinduction::{
-    trs::{parse_trs, task_by_rewrite, Lexicon, TRS},
+    trs::{parse_trs, task_by_rewrite, GPLexicon, Lexicon, TRS},
     GP,
 };
 use rand::{
@@ -29,7 +29,7 @@ fn main() {
     let start = Instant::now();
     start_section("Loading parameters");
     let rng = &mut thread_rng();
-    let params = exit_err(load_args(), "Failed to load parameters");
+    let mut params = exit_err(load_args(), "Failed to load parameters");
 
     start_section("Loading lexicon");
     let mut lex = exit_err(
@@ -78,8 +78,9 @@ fn main() {
     }
 
     start_section("Initial Population");
+    let gp_lex = GPLexicon::new(&lex);
     let mut pop = exit_err(
-        initialize_population(&lex, &params, rng, &data[0].lhs),
+        initialize_population(&gp_lex, &params, rng, &data[0].lhs),
         "couldn't initialize population",
     );
     for (i, (trs, score)) in pop.iter().enumerate() {
@@ -96,28 +97,20 @@ fn main() {
         prediction.pretty(&lex.signature()),
         data[0].rhs[0].pretty(&lex.signature()),
     ));
-    // println!(
-    //     "*** prediction: {} -> {} ({})",
-    //     data[0].lhs.pretty(&lex.signature()),
-    //     prediction.pretty(&lex.signature()),
-    //     data[0].rhs[0].pretty(&lex.signature())
-    // );
 
-    if true {
-        start_section("Evolving");
-        exit_err(
-            evolve(
-                &data[..params.simulation.n_examples],
-                &mut predictions,
-                &mut pop,
-                &h_star,
-                &lex,
-                &params,
-                rng,
-            ),
-            "evolution failed",
-        );
-    }
+    start_section("Evolving");
+    exit_err(
+        evolve(
+            &data[..params.simulation.n_examples],
+            &mut predictions,
+            &mut pop,
+            &h_star,
+            &gp_lex,
+            &mut params,
+            rng,
+        ),
+        "evolution failed",
+    );
     println!();
     println!("n,n_seen,accuracy,input,output,prediction");
     for (n, (accuracy, n_seen, input, prediction, output)) in predictions.iter().enumerate() {
@@ -164,12 +157,16 @@ pub fn logsumexp(lps: &[f64]) -> f64 {
 }
 
 fn initialize_population<R: Rng>(
-    lex: &Lexicon,
+    lex: &GPLexicon,
     params: &Params,
     rng: &mut R,
     input: &Term,
 ) -> Result<Vec<(TRS, f64)>, String> {
-    let schema = lex.infer_term(input, &mut HashMap::new()).drop().unwrap();
+    let schema = lex
+        .lexicon
+        .infer_term(input, &mut HashMap::new())
+        .drop()
+        .unwrap();
     let mut rules = Vec::with_capacity(params.gp.population_size);
     while rules.len() < rules.capacity() {
         let mut pop = lex.genesis(&params.genetic, rng, 1, &schema);
@@ -178,7 +175,7 @@ fn initialize_population<R: Rng>(
             .iter()
             .any(|(ptrs, _): &(TRS, _)| UntypedTRS::alphas(&trs, &ptrs.utrs()));
         if unique {
-            let sig = lex.signature();
+            let sig = lex.lexicon.signature();
             let mut trace = Trace::new(
                 &trs,
                 &sig,
@@ -193,8 +190,7 @@ fn initialize_population<R: Rng>(
                 .root()
                 .iter()
                 .map(|x| {
-                    //let mut sig = Signature::default();
-                    let sig = lex.signature().deep_copy();
+                    let sig = lex.lexicon.signature().deep_copy();
                     if UntypedTRS::convert_list_to_string(&x.term(), &sig).is_some() {
                         x.log_p()
                     } else {
@@ -254,12 +250,13 @@ fn evolve<R: Rng>(
     predictions: &mut Vec<(usize, usize, String, String, String)>,
     pop: &mut Vec<(TRS, f64)>,
     h_star: &TRS,
-    lex: &Lexicon,
-    params: &Params,
+    lex: &GPLexicon,
+    params: &mut Params,
     rng: &mut R,
 ) -> Result<(), String> {
     println!("n_data,generation,rank,nlposterior,h_star_nlposterior,trs");
     let max_op = lex
+        .lexicon
         .signature()
         .operators()
         .into_iter()
@@ -281,14 +278,14 @@ fn evolve<R: Rng>(
         };
         let input = &data[n_data].lhs;
         let output = &data[n_data].rhs[0];
-        let task = task_by_rewrite(&examples, params.model, lex, examples.to_vec())
+        let task = task_by_rewrite(&examples, params.model, &lex.lexicon, examples.to_vec())
             .map_err(|_| "bad task".to_string())?;
 
         for i in pop.iter_mut() {
-            i.1 = (task.oracle)(lex, &i.0);
+            i.1 = (task.oracle)(&lex.lexicon, &i.0);
         }
         pop.sort_by(|x, y| x.1.partial_cmp(&y.1).unwrap_or(std::cmp::Ordering::Equal));
-        let h_star_lpost = (task.oracle)(lex, h_star);
+        let h_star_lpost = (task.oracle)(&lex.lexicon, h_star);
         let mut seen = vec![];
 
         for gen in 0..params.simulation.generations_per_datum {
@@ -298,7 +295,8 @@ fn evolve<R: Rng>(
                 .map(|o| o.id())
                 .collect_vec();
             used_symbols.push(max_op);
-            let n = lex.contract(&used_symbols);
+            lex.lexicon.contract(&used_symbols);
+            lex.clear();
             lex.evolve(&params.genetic, rng, &params.gp, &task, &mut seen, pop);
             for (i, (h, lpost)) in pop.iter().enumerate() {
                 println!(
@@ -312,25 +310,21 @@ fn evolve<R: Rng>(
                 );
             }
         }
-        // lex.speciate(&params.genetic, rng, &params.gp, &task, pop);
-        // for (i, (h, lpost)) in pop.iter().enumerate() {
-        //     println!(
-        //         "{},{},{},{:.4},{:.4},{:?}",
-        //         n_data,
-        //         0,
-        //         i,
-        //         lpost,
-        //         h_star_lpost,
-        //         h.to_string(),
-        //     );
-        // }
         let prediction = make_prediction(pop, input, params);
+        let correct = prediction == *output;
+        if correct {
+            params.gp.n_delta =
+                ((params.gp.n_delta as f64) * params.simulation.confidence).ceil() as usize;
+        } else {
+            params.gp.n_delta =
+                ((params.gp.n_delta as f64) * params.simulation.confidence.recip()).ceil() as usize;
+        }
         predictions.push((
-            (prediction == *output) as usize,
+            correct as usize,
             seen.len(),
-            input.pretty(&lex.signature()),
-            prediction.pretty(&lex.signature()),
-            output.pretty(&lex.signature()),
+            input.pretty(&lex.lexicon.signature()),
+            prediction.pretty(&lex.lexicon.signature()),
+            output.pretty(&lex.lexicon.signature()),
         ));
     }
     Ok(())

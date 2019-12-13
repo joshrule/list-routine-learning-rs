@@ -57,6 +57,7 @@ pub struct SimulationParams {
     pub problem_dir: String,
     pub deterministic: bool,
     pub n_examples: usize,
+    pub confidence: f64,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
