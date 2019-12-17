@@ -1,0 +1,364 @@
+    Finished release [optimized] target(s) in 0.33s
+     Running `target/release/simulation trs/waves/1_5/c002/simulation.toml`
+
+Loading parameters
+------------------
+
+Loading lexicon
+---------------
+Signature:
+C/0: list → list
+TRUE/0: bool
+FALSE/0: bool
+NIL/0: list
+CONS/0: nat → list → list
+0/0: digit
+1/0: digit
+2/0: digit
+3/0: digit
+4/0: digit
+5/0: digit
+6/0: digit
+7/0: digit
+8/0: digit
+9/0: digit
+DIGIT/0: digit → nat
+DECC/0: nat → digit → nat
+./2: ∀t1. ∀t2. (t1 → t2) → t1 → t2
+EMPTY/0: list → bool
+EQUAL/0: ∀t0. t0 → t0 → bool
+HEAD/0: list → nat
+IF/0: ∀t0. bool → t0 → t0 → t0
+TAIL/0: list → list
+x_: t6
+y_: t7
+x_: t20
+x_: t30
+y_: t31
+x_: t41
+y_: t42
+x_: t54
+y_: t55
+x_: t68
+y_: t69
+x_: t88
+y_: t89
+
+Background: 9
+EMPTY [] = TRUE
+EMPTY (CONS x_ y_) = FALSE
+EQUAL x_ x_ = TRUE
+EQUAL x_ y_ = FALSE
+HEAD (CONS x_ y_) = x_
+IF TRUE x_ y_ = x_
+IF FALSE x_ y_ = y_
+TAIL [] = []
+TAIL (CONS x_ y_) = y_
+
+Templates: 4
+C (CONS [!] [!]) = [!]
+C [] = [!]
+C [!] = [!]
+[!] = [!]
+
+Deterministic: true
+
+Context { substitution: {}, cache: {}, next: 217 }
+
+Loading data
+------------
+Datum { i: IntList([25, 8, 28, 8, 10, 0, 0, 48, 4]), o: IntList([16, 25]) }
+Datum { i: IntList([]), o: IntList([16, 25]) }
+Datum { i: IntList([37, 1, 6, 9, 10, 4, 6, 5, 11, 10]), o: IntList([16, 25]) }
+Datum { i: IntList([65, 6, 9, 6, 31, 19, 2, 91, 9, 3]), o: IntList([16, 25]) }
+Datum { i: IntList([4, 2, 4, 1, 86, 0]), o: IntList([16, 25]) }
+Datum { i: IntList([5, 52, 8, 1]), o: IntList([16, 25]) }
+Datum { i: IntList([0, 5, 3]), o: IntList([16, 25]) }
+Datum { i: IntList([0, 56, 8, 5, 33, 0, 40, 9]), o: IntList([16, 25]) }
+Datum { i: IntList([88, 71, 38, 11, 2]), o: IntList([16, 25]) }
+Datum { i: IntList([24, 69, 5]), o: IntList([16, 25]) }
+Datum { i: IntList([1, 7, 0, 75, 3, 2]), o: IntList([16, 25]) }
+Datum { i: IntList([74, 95, 4, 0, 96, 9, 31, 25, 4, 9]), o: IntList([16, 25]) }
+Datum { i: IntList([1]), o: IntList([16, 25]) }
+Datum { i: IntList([27, 8, 52, 1, 53, 82, 62]), o: IntList([16, 25]) }
+Datum { i: IntList([3]), o: IntList([16, 25]) }
+Datum { i: IntList([8, 82, 7, 9, 34, 90, 65, 2, 20]), o: IntList([16, 25]) }
+Datum { i: IntList([2, 5, 3, 20, 7, 35, 32, 0, 91]), o: IntList([16, 25]) }
+Datum { i: IntList([91, 3, 7, 0]), o: IntList([16, 25]) }
+Datum { i: IntList([2, 4]), o: IntList([16, 25]) }
+Datum { i: IntList([7, 6, 9, 66, 3, 13, 9, 33, 11, 40]), o: IntList([16, 25]) }
+Datum { i: IntList([10, 10, 12, 56, 4]), o: IntList([16, 25]) }
+Datum { i: IntList([27, 6, 47]), o: IntList([16, 25]) }
+Datum { i: IntList([1, 4, 89]), o: IntList([16, 25]) }
+Datum { i: IntList([10, 9, 34, 78, 3, 44, 30]), o: IntList([16, 25]) }
+Datum { i: IntList([3, 95, 36, 11, 2, 75]), o: IntList([16, 25]) }
+Datum { i: IntList([76, 8, 73, 44, 85]), o: IntList([16, 25]) }
+Datum { i: IntList([94, 17, 3, 90, 68, 4, 7, 5, 10, 7]), o: IntList([16, 25]) }
+Datum { i: IntList([38, 4, 97, 98, 8, 53, 4, 19, 94]), o: IntList([16, 25]) }
+Datum { i: IntList([7, 26, 6, 4, 10, 0, 8, 9]), o: IntList([16, 25]) }
+Datum { i: IntList([2, 5, 4, 5, 20, 75, 7]), o: IntList([16, 25]) }
+Datum { i: IntList([8]), o: IntList([16, 25]) }
+Datum { i: IntList([7, 9, 1, 2]), o: IntList([16, 25]) }
+Datum { i: IntList([9, 9]), o: IntList([16, 25]) }
+Datum { i: IntList([1, 18, 0, 65, 5, 32, 5, 10, 83, 0]), o: IntList([16, 25]) }
+Datum { i: IntList([7, 75, 84]), o: IntList([16, 25]) }
+Datum { i: IntList([0, 93, 74, 2, 30]), o: IntList([16, 25]) }
+Datum { i: IntList([66, 2, 0, 56, 84, 0, 82, 7, 2]), o: IntList([16, 25]) }
+Datum { i: IntList([2, 88, 4]), o: IntList([16, 25]) }
+Datum { i: IntList([5, 0]), o: IntList([16, 25]) }
+Datum { i: IntList([6, 2, 7, 8]), o: IntList([16, 25]) }
+Datum { i: IntList([4, 3, 2]), o: IntList([16, 25]) }
+Datum { i: IntList([64, 45, 4, 99, 96, 6, 1, 15, 19]), o: IntList([16, 25]) }
+Datum { i: IntList([1, 49, 35, 0]), o: IntList([16, 25]) }
+Datum { i: IntList([6, 24, 25, 6, 54]), o: IntList([16, 25]) }
+Datum { i: IntList([76]), o: IntList([16, 25]) }
+Datum { i: IntList([3, 3, 98, 1, 12]), o: IntList([16, 25]) }
+Datum { i: IntList([86, 46, 69, 15, 27, 3, 4, 7, 71, 8]), o: IntList([16, 25]) }
+Datum { i: IntList([84, 20, 7]), o: IntList([16, 25]) }
+Datum { i: IntList([81, 30, 8, 26, 12, 34, 0, 35, 64]), o: IntList([16, 25]) }
+Datum { i: IntList([3, 6, 95]), o: IntList([16, 25]) }
+
+Loading H*
+----------
+.(C xs_) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));
+operators: [C, TRUE, FALSE, NIL, CONS, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, DIGIT, DECC, ., EMPTY, EQUAL, HEAD, IF, TAIL]
+
+Initial Population
+------------------
+0: 5.7807 ".(var93_ var94_) = var94_;"
+1: 6.4739 ".(C var15_) = NIL;"
+2: 6.4739 ".(C var47_) = var47_;"
+3: 8.6711 ".(C .(var57_ var58_)) = var58_;"
+4: 8.6711 ".(C .(var95_ var96_)) = NIL;"
+5: 8.9588 ".(C var74_) = .(TAIL var74_);"
+6: 10.4629 ".(C .(.(CONS var20_) var21_)) = NIL;"
+7: 10.4629 ".(C .(.(CONS var65_) var66_)) = var66_;"
+8: 12.9478 ".(C .(.(CONS var343_) var344_)) = .(TAIL NIL);"
+9: 14.0464 ".(C .(.(CONS .(var84_ var85_)) var86_)) = var86_;"
+
+Initial Prediction
+------------------
+
+Evolving
+--------
+n_data,generation,rank,nlposterior,h_star_nlposterior,trs
+1,0,0,1.0654,0.0675,".(C .(var432_ .(var454_ .(var457_ .(var454_ .(.(var431_ .(var435_ var445_)) var449_)))))) = .(.(var431_ .(var435_ 6)) .(var432_ NIL));"
+1,0,1,1.1012,0.1033,".(C var4511_) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));"
+1,0,2,1.1232,0.1253,".(C .(var432_ .(var454_ .(var457_ .(var454_ .(.(var431_ .(var435_ var445_)) var449_)))))) = .(.(var431_ .(var435_ 6)) .(var432_ NIL));\n.(C var47_) = var47_;"
+1,0,3,1.1646,0.1667,".(C .(var364_ .(var706_ .(var709_ .(var706_ .(.(CONS .(var687_ var697_)) var701_)))))) = .(.(CONS .(var687_ 6)) .(var364_ NIL));"
+1,0,4,1.2147,0.2168,".(C .(var4129_ .(var4151_ .(var4154_ .(var4151_ .(.(var4128_ .(var4132_ var4142_)) var4146_)))))) = .(.(var4128_ .(var4132_ 6)) .(var4129_ NIL));\n.(C .(.(CONS var65_) var66_)) = var66_;"
+1,0,5,1.2224,0.2245,".(C .(var364_ .(var706_ .(var709_ .(var706_ .(.(CONS .(var687_ var697_)) var701_)))))) = .(.(CONS .(var687_ 6)) .(var364_ NIL));\n.(C var47_) = var47_;"
+1,0,6,1.2242,0.2263,".(C .(var396_ .(var418_ .(var421_ .(var418_ .(.(var395_ .(var399_ var409_)) .(var411_ .(var411_ .(var407_ .(var402_ var370_)))))))))) = .(.(var395_ .(var399_ 6)) .(var396_ var370_));"
+1,0,7,1.2820,0.2841,".(C .(var396_ .(var418_ .(var421_ .(var418_ .(.(var395_ .(var399_ var409_)) .(var411_ .(var411_ .(var407_ .(var402_ var370_)))))))))) = .(.(var395_ .(var399_ 6)) .(var396_ var370_));\n.(C var47_) = var47_;"
+1,0,8,1.3076,0.3097,".(C .(.(CONS .(.(DECC .(DIGIT 2)) 5)) var353_)) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));"
+1,0,9,1.3140,0.3161,".(C .(var4050_ .(var4403_ .(var4406_ .(var4403_ .(.(CONS .(var4384_ var4394_)) var4398_)))))) = .(.(CONS .(var4384_ 6)) .(var4050_ NIL));\n.(C .(.(CONS var65_) var66_)) = var66_;"
+1,1,0,0.9762,-0.0217,".(C .(var6133_ var353_)) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(var6133_ NIL));"
+1,1,1,1.0293,0.0314,".(C .(var8497_ .(.(var8496_ .(DIGIT 8)) var8507_))) = .(.(var8496_ .(.(DECC .(DIGIT 1)) 6)) .(var8497_ NIL));"
+1,1,2,1.0654,0.0675,".(C .(var432_ .(var454_ .(var457_ .(var454_ .(.(var431_ .(var435_ var445_)) var449_)))))) = .(.(var431_ .(var435_ 6)) .(var432_ NIL));"
+1,1,3,1.0992,0.1013,".(C .(.(CONS var6119_) var353_)) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS var6119_) NIL));"
+1,1,4,1.1012,0.1033,".(C var4511_) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));"
+1,1,5,1.1108,0.1129,".(C .(var7796_ .(.(CONS .(DIGIT 8)) var8540_))) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(var7796_ NIL));"
+1,1,6,1.1232,0.1253,".(C .(var432_ .(var454_ .(var457_ .(var454_ .(.(var431_ .(var435_ var445_)) var449_)))))) = .(.(var431_ .(var435_ 6)) .(var432_ NIL));\n.(C var47_) = var47_;"
+1,1,7,1.1607,0.1628,".(C .(.(var6125_ .(.(DECC .(DIGIT 2)) 5)) var353_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ .(.(DECC .(DIGIT 2)) 5)) NIL));"
+1,1,8,1.1646,0.1667,".(C .(var364_ .(var706_ .(var709_ .(var706_ .(.(CONS .(var687_ var697_)) var701_)))))) = .(.(CONS .(var687_ 6)) .(var364_ NIL));"
+1,1,9,1.1725,0.1746,".(C .(.(CONS .(var6141_ 5)) var353_)) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(var6141_ 5)) NIL));"
+1,2,0,0.9762,-0.0217,".(C .(var6133_ var353_)) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(var6133_ NIL));"
+1,2,1,0.9791,-0.0188,".(C .(.(var6125_ var9329_) var353_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ var9329_) NIL));"
+1,2,2,0.9802,-0.0177,".(var9440_ .(.(var6125_ var9436_) var9438_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ var9436_) NIL));"
+1,2,3,1.0293,0.0314,".(C .(var8497_ .(.(var8496_ .(DIGIT 8)) var8507_))) = .(.(var8496_ .(.(DECC .(DIGIT 1)) 6)) .(var8497_ NIL));"
+1,2,4,1.0523,0.0544,".(C .(.(var6125_ .(var9333_ 5)) var353_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ .(var9333_ 5)) NIL));"
+1,2,5,1.0654,0.0675,".(C .(var432_ .(var454_ .(var457_ .(var454_ .(.(var431_ .(var435_ var445_)) var449_)))))) = .(.(var431_ .(var435_ 6)) .(var432_ NIL));"
+1,2,6,1.0774,0.0795,".(var10637_ .(var10093_ .(var10633_ .(var10635_ .(var10633_ .(.(var10629_ .(var10627_ var697_)) var10631_)))))) = .(.(var10629_ .(var10627_ 6)) .(var10093_ NIL));"
+1,2,7,1.0927,0.0948,".(C .(.(var6125_ .(.(DECC var9335_) 5)) var353_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ .(.(DECC var9335_) 5)) NIL));"
+1,2,8,1.0992,0.1013,".(C .(.(CONS var6119_) var353_)) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS var6119_) NIL));"
+1,2,9,1.1012,0.1033,".(C var4511_) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));"
+1,3,0,0.9762,-0.0217,".(C .(var6133_ var353_)) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(var6133_ NIL));"
+1,3,1,0.9791,-0.0188,".(C .(.(var6125_ var9329_) var353_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ var9329_) NIL));"
+1,3,2,0.9802,-0.0177,".(var9440_ .(.(var6125_ var9436_) var9438_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ var9436_) NIL));"
+1,3,3,1.0293,0.0314,".(C .(var8497_ .(.(var8496_ .(DIGIT 8)) var8507_))) = .(.(var8496_ .(.(DECC .(DIGIT 1)) 6)) .(var8497_ NIL));"
+1,3,4,1.0523,0.0544,".(C .(.(var6125_ .(var9333_ 5)) var353_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ .(var9333_ 5)) NIL));"
+1,3,5,1.0588,0.0609,".(C .(.(var6125_ .(.(DECC var9335_) var13688_)) var353_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ .(.(DECC var9335_) var13688_)) NIL));"
+1,3,6,1.0654,0.0675,".(C .(var432_ .(var454_ .(var457_ .(var454_ .(.(var431_ .(var435_ var445_)) var449_)))))) = .(.(var431_ .(var435_ 6)) .(var432_ NIL));"
+1,3,7,1.0681,0.0702,".(var14334_ .(.(var6125_ .(.(var14326_ var9335_) var13688_)) var14332_)) = .(.(var6125_ .(.(var14326_ .(DIGIT 1)) 6)) .(.(var6125_ .(.(var14326_ var9335_) var13688_)) NIL));"
+1,3,8,1.0774,0.0795,".(var10637_ .(var10093_ .(var10633_ .(var10635_ .(var10633_ .(.(var10629_ .(var10627_ var697_)) var10631_)))))) = .(.(var10629_ .(var10627_ 6)) .(var10093_ NIL));"
+1,3,9,1.0927,0.0948,".(C .(.(var6125_ .(.(DECC var9335_) 5)) var353_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ .(.(DECC var9335_) 5)) NIL));"
+1,4,0,0.9762,-0.0217,".(C .(var6133_ var353_)) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(var6133_ NIL));"
+1,4,1,0.9791,-0.0188,".(C .(.(var6125_ var9329_) var353_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ var9329_) NIL));"
+1,4,2,0.9802,-0.0177,".(var9440_ .(.(var6125_ var9436_) var9438_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ var9436_) NIL));"
+1,4,3,1.0293,0.0314,".(C .(var8497_ .(.(var8496_ .(DIGIT 8)) var8507_))) = .(.(var8496_ .(.(DECC .(DIGIT 1)) 6)) .(var8497_ NIL));"
+1,4,4,1.0523,0.0544,".(C .(.(var6125_ .(var9333_ 5)) var353_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ .(var9333_ 5)) NIL));"
+1,4,5,1.0588,0.0609,".(C .(.(var6125_ .(.(DECC var9335_) var13688_)) var353_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ .(.(DECC var9335_) var13688_)) NIL));"
+1,4,6,1.0654,0.0675,".(C .(var432_ .(var454_ .(var457_ .(var454_ .(.(var431_ .(var435_ var445_)) var449_)))))) = .(.(var431_ .(var435_ 6)) .(var432_ NIL));"
+1,4,7,1.0681,0.0702,".(var14334_ .(.(var6125_ .(.(var14326_ var9335_) var13688_)) var14332_)) = .(.(var6125_ .(.(var14326_ .(DIGIT 1)) 6)) .(.(var6125_ .(.(var14326_ var9335_) var13688_)) NIL));"
+1,4,8,1.0774,0.0795,".(var10637_ .(var10093_ .(var10633_ .(var10635_ .(var10633_ .(.(var10629_ .(var10627_ var697_)) var10631_)))))) = .(.(var10629_ .(var10627_ 6)) .(var10093_ NIL));"
+1,4,9,1.0779,0.0800,".(C .(.(var6125_ .(.(var22648_ var9335_) var22588_)) var22654_)) = .(.(var6125_ .(.(var22648_ .(DIGIT 1)) 6)) .(.(var6125_ .(.(var22648_ var9335_) var22588_)) NIL));"
+1,5,0,0.9762,-0.0217,".(C .(var6133_ var353_)) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(var6133_ NIL));"
+1,5,1,0.9791,-0.0188,".(C .(.(var6125_ var9329_) var353_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ var9329_) NIL));"
+1,5,2,0.9802,-0.0177,".(var9440_ .(.(var6125_ var9436_) var9438_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ var9436_) NIL));"
+1,5,3,1.0184,0.0205,".(C .(.(var6125_ .(var29713_ var13688_)) var353_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ .(var29713_ var13688_)) NIL));"
+1,5,4,1.0293,0.0314,".(C .(var8497_ .(.(var8496_ .(DIGIT 8)) var8507_))) = .(.(var8496_ .(.(DECC .(DIGIT 1)) 6)) .(var8497_ NIL));"
+1,5,5,1.0523,0.0544,".(C .(.(var6125_ .(var9333_ 5)) var353_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ .(var9333_ 5)) NIL));"
+1,5,6,1.0588,0.0609,".(C .(.(var6125_ .(.(DECC var9335_) var13688_)) var353_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ .(.(DECC var9335_) var13688_)) NIL));"
+1,5,7,1.0600,0.0621,".(var30377_ .(.(var6125_ .(.(DECC var9335_) var13688_)) var29722_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ .(.(DECC var9335_) var13688_)) NIL));"
+1,5,8,1.0654,0.0675,".(C .(var432_ .(var454_ .(var457_ .(var454_ .(.(var431_ .(var435_ var445_)) var449_)))))) = .(.(var431_ .(var435_ 6)) .(var432_ NIL));"
+1,5,9,1.0681,0.0702,".(var14334_ .(.(var6125_ .(.(var14326_ var9335_) var13688_)) var14332_)) = .(.(var6125_ .(.(var14326_ .(DIGIT 1)) 6)) .(.(var6125_ .(.(var14326_ var9335_) var13688_)) NIL));"
+1,6,0,0.9762,-0.0217,".(C .(var6133_ var353_)) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(var6133_ NIL));"
+1,6,1,0.9791,-0.0188,".(C .(.(var6125_ var9329_) var353_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ var9329_) NIL));"
+1,6,2,0.9802,-0.0177,".(var9440_ .(.(var6125_ var9436_) var9438_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ var9436_) NIL));"
+1,6,3,0.9912,-0.0067,".(C .(var8497_ .(.(var8496_ var37054_) var8507_))) = .(.(var8496_ .(.(DECC .(DIGIT 1)) 6)) .(var8497_ NIL));"
+1,6,4,0.9982,0.0002,".(var37788_ .(var8497_ .(.(var8496_ var37786_) var37068_))) = .(.(var8496_ .(.(DECC .(DIGIT 1)) 6)) .(var8497_ NIL));"
+1,6,5,1.0144,0.0165,".(C .(var8497_ .(.(var8496_ .(DIGIT var37046_)) var8507_))) = .(.(var8496_ .(.(DECC .(DIGIT 1)) 6)) .(var8497_ NIL));"
+1,6,6,1.0155,0.0176,".(var37774_ .(var37082_ .(.(var8496_ .(var37766_ var37770_)) var37768_))) = .(.(var8496_ .(.(DECC .(var37766_ 1)) 6)) .(var37082_ NIL));"
+1,6,7,1.0184,0.0205,".(C .(.(var6125_ .(var29713_ var13688_)) var353_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ .(var29713_ var13688_)) NIL));"
+1,6,8,1.0235,0.0256,".(C .(var8497_ .(.(var8496_ .(var37056_ 8)) var8507_))) = .(.(var8496_ .(.(DECC .(var37056_ 1)) 6)) .(var8497_ NIL));"
+1,6,9,1.0293,0.0314,".(C .(var8497_ .(.(var8496_ .(DIGIT 8)) var8507_))) = .(.(var8496_ .(.(DECC .(DIGIT 1)) 6)) .(var8497_ NIL));"
+1,7,0,0.9762,-0.0217,".(C .(var6133_ var353_)) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(var6133_ NIL));"
+1,7,1,0.9791,-0.0188,".(C .(.(var6125_ var9329_) var353_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ var9329_) NIL));"
+1,7,2,0.9802,-0.0177,".(var9440_ .(.(var6125_ var9436_) var9438_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ var9436_) NIL));"
+1,7,3,0.9912,-0.0067,".(C .(var8497_ .(.(var8496_ var37054_) var8507_))) = .(.(var8496_ .(.(DECC .(DIGIT 1)) 6)) .(var8497_ NIL));"
+1,7,4,0.9982,0.0002,".(var37788_ .(var8497_ .(.(var8496_ var37786_) var37068_))) = .(.(var8496_ .(.(DECC .(DIGIT 1)) 6)) .(var8497_ NIL));"
+1,7,5,1.0086,0.0107,".(C .(var44118_ .(.(var8496_ .(var44135_ var44139_)) var44137_))) = .(.(var8496_ .(.(DECC .(var44135_ 1)) 6)) .(var44118_ NIL));"
+1,7,6,1.0144,0.0165,".(C .(var8497_ .(.(var8496_ .(DIGIT var37046_)) var8507_))) = .(.(var8496_ .(.(DECC .(DIGIT 1)) 6)) .(var8497_ NIL));"
+1,7,7,1.0155,0.0176,".(var37774_ .(var37082_ .(.(var8496_ .(var37766_ var37770_)) var37768_))) = .(.(var8496_ .(.(DECC .(var37766_ 1)) 6)) .(var37082_ NIL));"
+1,7,8,1.0184,0.0205,".(C .(.(var6125_ .(var29713_ var13688_)) var353_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ .(var29713_ var13688_)) NIL));"
+1,7,9,1.0235,0.0256,".(C .(var8497_ .(.(var8496_ .(var37056_ 8)) var8507_))) = .(.(var8496_ .(.(DECC .(var37056_ 1)) 6)) .(var8497_ NIL));"
+1,8,0,0.9762,-0.0217,".(C .(var6133_ var353_)) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(var6133_ NIL));"
+1,8,1,0.9791,-0.0188,".(C .(.(var6125_ var9329_) var353_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ var9329_) NIL));"
+1,8,2,0.9802,-0.0177,".(var9440_ .(.(var6125_ var9436_) var9438_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ var9436_) NIL));"
+1,8,3,0.9912,-0.0067,".(C .(var8497_ .(.(var8496_ var37054_) var8507_))) = .(.(var8496_ .(.(DECC .(DIGIT 1)) 6)) .(var8497_ NIL));"
+1,8,4,0.9982,0.0002,".(var37788_ .(var8497_ .(.(var8496_ var37786_) var37068_))) = .(.(var8496_ .(.(DECC .(DIGIT 1)) 6)) .(var8497_ NIL));"
+1,8,5,1.0086,0.0107,".(C .(var44118_ .(.(var8496_ .(var44135_ var44139_)) var44137_))) = .(.(var8496_ .(.(DECC .(var44135_ 1)) 6)) .(var44118_ NIL));"
+1,8,6,1.0144,0.0165,".(C .(var8497_ .(.(var8496_ .(DIGIT var37046_)) var8507_))) = .(.(var8496_ .(.(DECC .(DIGIT 1)) 6)) .(var8497_ NIL));"
+1,8,7,1.0155,0.0176,".(var37774_ .(var37082_ .(.(var8496_ .(var37766_ var37770_)) var37768_))) = .(.(var8496_ .(.(DECC .(var37766_ 1)) 6)) .(var37082_ NIL));"
+1,8,8,1.0184,0.0205,".(C .(.(var6125_ .(var29713_ var13688_)) var353_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ .(var29713_ var13688_)) NIL));"
+1,8,9,1.0235,0.0256,".(C .(var8497_ .(.(var8496_ .(var37056_ 8)) var8507_))) = .(.(var8496_ .(.(DECC .(var37056_ 1)) 6)) .(var8497_ NIL));"
+1,9,0,0.9762,-0.0217,".(C .(var6133_ var353_)) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(var6133_ NIL));"
+1,9,1,0.9791,-0.0188,".(C .(.(var6125_ var9329_) var353_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ var9329_) NIL));"
+1,9,2,0.9802,-0.0177,".(var9440_ .(.(var6125_ var9436_) var9438_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ var9436_) NIL));"
+1,9,3,0.9912,-0.0067,".(C .(var8497_ .(.(var8496_ var37054_) var8507_))) = .(.(var8496_ .(.(DECC .(DIGIT 1)) 6)) .(var8497_ NIL));"
+1,9,4,0.9982,0.0002,".(var37788_ .(var8497_ .(.(var8496_ var37786_) var37068_))) = .(.(var8496_ .(.(DECC .(DIGIT 1)) 6)) .(var8497_ NIL));"
+1,9,5,1.0086,0.0107,".(C .(var44118_ .(.(var8496_ .(var44135_ var44139_)) var44137_))) = .(.(var8496_ .(.(DECC .(var44135_ 1)) 6)) .(var44118_ NIL));"
+1,9,6,1.0144,0.0165,".(C .(var8497_ .(.(var8496_ .(DIGIT var37046_)) var8507_))) = .(.(var8496_ .(.(DECC .(DIGIT 1)) 6)) .(var8497_ NIL));"
+1,9,7,1.0155,0.0176,".(var37774_ .(var37082_ .(.(var8496_ .(var37766_ var37770_)) var37768_))) = .(.(var8496_ .(.(DECC .(var37766_ 1)) 6)) .(var37082_ NIL));"
+1,9,8,1.0184,0.0205,".(C .(.(var6125_ .(var29713_ var13688_)) var353_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ .(var29713_ var13688_)) NIL));"
+1,9,9,1.0196,0.0217,".(var55142_ .(.(var6125_ .(var29713_ var13688_)) var55125_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ .(var29713_ var13688_)) NIL));"
+2,0,0,1.7905,0.0122,".(C var64229_) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));"
+2,0,1,2.0446,0.2663,".(var64282_ .(.(var6125_ var9436_) var9438_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ var9436_) NIL));\n.(var64284_ NIL) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));"
+2,0,2,2.0556,0.2773,".(C var64292_) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) var64292_));\n.(var9440_ .(.(var6125_ var9436_) var9438_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ var9436_) NIL));"
+2,0,3,2.0840,0.3057,".(var64898_ .(.(var6125_ .(var29713_ var13688_)) var353_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ .(var29713_ var13688_)) NIL));\n.(var64900_ NIL) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));"
+2,0,4,2.0909,0.3126,".(var37774_ .(var37082_ .(.(var8496_ .(var37766_ var37770_)) var37768_))) = .(.(var8496_ .(.(DECC .(var37766_ 1)) 6)) .(var37082_ NIL));\n.(C var65508_) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));"
+2,0,5,3.3188,1.5405,".(C NIL) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));\n.(C .(.(CONS .(.(DECC .(DIGIT 2)) 5)) .(.(CONS .(DIGIT 8)) .(.(CONS .(.(DECC .(DIGIT 2)) 8)) .(.(CONS .(DIGIT 8)) .(.(CONS .(.(DECC .(DIGIT 1)) 0)) .(.(CONS .(DIGIT 0)) .(.(CONS .(DIGIT 0)) .(.(CONS .(.(DECC .(DIGIT 4)) 8)) .(.(CONS .(DIGIT 4)) var61485_)))))))))) = .(C var61485_);"
+2,0,6,3.4841,1.7058,".(C NIL) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));\n.(C .(.(CONS .(.(DECC .(DIGIT 2)) 5)) .(.(CONS .(DIGIT 8)) .(.(CONS .(.(DECC .(DIGIT 2)) 8)) var61462_)))) = .(C var61462_);\n.(C .(.(CONS .(DIGIT 0)) .(.(CONS .(.(DECC .(DIGIT 4)) 8)) .(.(CONS .(DIGIT 4)) var61464_)))) = .(C var61464_);\n.(C .(.(CONS .(DIGIT 8)) .(.(CONS .(.(DECC .(DIGIT 1)) 0)) .(.(CONS .(DIGIT 0)) var61463_)))) = .(C var61463_);"
+2,0,7,3.5467,1.7684,".(C NIL) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));\n.(C .(.(CONS .(.(DECC .(DIGIT 2)) 5)) var61443_)) = .(C var61443_);\n.(C .(.(CONS .(DIGIT 4)) var61451_)) = .(C var61451_);\n.(C .(.(CONS .(.(DECC .(DIGIT 4)) 8)) var61450_)) = .(C var61450_);\n.(C .(.(CONS .(DIGIT 0)) var61448_)) = .(C var61448_);\n.(C .(.(CONS .(.(DECC .(DIGIT 1)) 0)) var61447_)) = .(C var61447_);\n.(C .(.(CONS .(.(DECC .(DIGIT 2)) 8)) var61445_)) = .(C var61445_);\n.(C .(.(CONS .(DIGIT 8)) var61444_)) = .(C var61444_);"
+2,0,8,3.6180,1.8397,".(C NIL) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));\n.(C .(.(CONS .(.(DECC .(DIGIT 2)) 5)) .(.(CONS .(DIGIT 8)) .(.(CONS .(.(DECC .(DIGIT 2)) 8)) .(.(CONS .(DIGIT 8)) .(.(CONS .(.(DECC .(DIGIT 1)) 0)) .(.(CONS .(DIGIT 0)) .(.(CONS .(DIGIT 0)) .(.(CONS .(.(DECC .(DIGIT 4)) 8)) .(.(CONS .(DIGIT 4)) var61610_)))))))))) = .(C var61610_);\n.(C .(var8497_ .(.(var8496_ .(DIGIT var37046_)) var8507_))) = .(.(var8496_ .(.(DECC .(DIGIT 1)) 6)) .(var8497_ NIL));"
+2,0,9,3.6847,1.9064,".(C NIL) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));\n.(C .(.(CONS .(.(DECC .(DIGIT 2)) 5)) .(.(CONS .(DIGIT 8)) .(.(CONS .(.(DECC .(DIGIT 2)) 8)) var65531_)))) = .(C var65531_);\n.(C .(.(CONS .(DIGIT 0)) .(.(CONS .(.(DECC var66524_) 8)) .(.(CONS .(DIGIT 4)) var65533_)))) = .(C var65533_);\n.(C .(.(CONS .(DIGIT 8)) .(.(CONS .(.(DECC var66525_) 0)) .(.(CONS .(DIGIT 0)) var65532_)))) = .(C var65532_);\n.(var55142_ .(.(var6125_ .(var29713_ var13688_)) var55125_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ .(var29713_ var13688_)) NIL));"
+2,1,0,1.7905,0.0122,".(C var64229_) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));"
+2,1,1,2.0204,0.2421,".(C NIL) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));\n.(var55142_ .(.(var6125_ .(var29713_ var13688_)) var55125_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ .(var29713_ var13688_)) NIL));"
+2,1,2,2.0446,0.2663,".(var64282_ .(.(var6125_ var9436_) var9438_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ var9436_) NIL));\n.(var64284_ NIL) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));"
+2,1,3,2.0556,0.2773,".(C var64292_) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) var64292_));\n.(var9440_ .(.(var6125_ var9436_) var9438_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ var9436_) NIL));"
+2,1,4,2.0840,0.3057,".(var64898_ .(.(var6125_ .(var29713_ var13688_)) var353_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ .(var29713_ var13688_)) NIL));\n.(var64900_ NIL) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));"
+2,1,5,2.0909,0.3126,".(var37774_ .(var37082_ .(.(var8496_ .(var37766_ var37770_)) var37768_))) = .(.(var8496_ .(.(DECC .(var37766_ 1)) 6)) .(var37082_ NIL));\n.(C var65508_) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));"
+2,1,6,2.2058,0.4275,".(C NIL) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));\n.(C .(.(CONS .(DIGIT 8)) var61444_)) = .(C var61444_);\n.(var55142_ .(.(var6125_ .(var29713_ var13688_)) var55125_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ .(var29713_ var13688_)) NIL));"
+2,1,7,2.2058,0.4275,".(C NIL) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));\n.(C .(.(CONS .(DIGIT 0)) var61448_)) = .(C var61448_);\n.(var55142_ .(.(var6125_ .(var29713_ var13688_)) var55125_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ .(var29713_ var13688_)) NIL));"
+2,1,8,2.2058,0.4275,".(C NIL) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));\n.(C .(.(CONS .(DIGIT 4)) var61451_)) = .(C var61451_);\n.(var55142_ .(.(var6125_ .(var29713_ var13688_)) var55125_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ .(var29713_ var13688_)) NIL));"
+2,1,9,2.2688,0.4905,".(C NIL) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));\n.(C .(.(CONS .(.(DECC .(DIGIT 2)) 8)) var61445_)) = .(C var61445_);\n.(var55142_ .(.(var6125_ .(var29713_ var13688_)) var55125_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ .(var29713_ var13688_)) NIL));"
+2,2,0,1.7905,0.0122,".(C var64229_) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));"
+2,2,1,2.0204,0.2421,".(C NIL) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));\n.(var55142_ .(.(var6125_ .(var29713_ var13688_)) var55125_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ .(var29713_ var13688_)) NIL));"
+2,2,2,2.0446,0.2663,".(var64282_ .(.(var6125_ var9436_) var9438_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ var9436_) NIL));\n.(var64284_ NIL) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));"
+2,2,3,2.0556,0.2773,".(C var64292_) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) var64292_));\n.(var9440_ .(.(var6125_ var9436_) var9438_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ var9436_) NIL));"
+2,2,4,2.0840,0.3057,".(var64898_ .(.(var6125_ .(var29713_ var13688_)) var353_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ .(var29713_ var13688_)) NIL));\n.(var64900_ NIL) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));"
+2,2,5,2.0909,0.3126,".(var37774_ .(var37082_ .(.(var8496_ .(var37766_ var37770_)) var37768_))) = .(.(var8496_ .(.(DECC .(var37766_ 1)) 6)) .(var37082_ NIL));\n.(C var65508_) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));"
+2,2,6,2.2058,0.4275,".(C NIL) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));\n.(C .(.(CONS .(DIGIT 8)) var61444_)) = .(C var61444_);\n.(var55142_ .(.(var6125_ .(var29713_ var13688_)) var55125_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ .(var29713_ var13688_)) NIL));"
+2,2,7,2.2058,0.4275,".(C NIL) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));\n.(C .(.(CONS .(DIGIT 0)) var61448_)) = .(C var61448_);\n.(var55142_ .(.(var6125_ .(var29713_ var13688_)) var55125_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ .(var29713_ var13688_)) NIL));"
+2,2,8,2.2058,0.4275,".(C NIL) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));\n.(C .(.(CONS .(DIGIT 4)) var61451_)) = .(C var61451_);\n.(var55142_ .(.(var6125_ .(var29713_ var13688_)) var55125_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ .(var29713_ var13688_)) NIL));"
+2,2,9,2.2239,0.4456,".(C .(.(CONS .(HEAD NIL)) var70747_)) = var70747_;\n.(C var64292_) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) var64292_));\n.(var9440_ .(.(var6125_ var9436_) var9438_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ var9436_) NIL));"
+2,3,0,1.7905,0.0122,".(C var64229_) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));"
+2,3,1,2.0204,0.2421,".(C NIL) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));\n.(var55142_ .(.(var6125_ .(var29713_ var13688_)) var55125_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ .(var29713_ var13688_)) NIL));"
+2,3,2,2.0446,0.2663,".(var64282_ .(.(var6125_ var9436_) var9438_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ var9436_) NIL));\n.(var64284_ NIL) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));"
+2,3,3,2.0556,0.2773,".(C var64292_) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) var64292_));\n.(var9440_ .(.(var6125_ var9436_) var9438_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ var9436_) NIL));"
+2,3,4,2.0840,0.3057,".(var64898_ .(.(var6125_ .(var29713_ var13688_)) var353_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ .(var29713_ var13688_)) NIL));\n.(var64900_ NIL) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));"
+2,3,5,2.0909,0.3126,".(var37774_ .(var37082_ .(.(var8496_ .(var37766_ var37770_)) var37768_))) = .(.(var8496_ .(.(DECC .(var37766_ 1)) 6)) .(var37082_ NIL));\n.(C var65508_) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));"
+2,3,6,2.2058,0.4275,".(C NIL) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));\n.(C .(.(CONS .(DIGIT 8)) var61444_)) = .(C var61444_);\n.(var55142_ .(.(var6125_ .(var29713_ var13688_)) var55125_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ .(var29713_ var13688_)) NIL));"
+2,3,7,2.2058,0.4275,".(C NIL) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));\n.(C .(.(CONS .(DIGIT 0)) var61448_)) = .(C var61448_);\n.(var55142_ .(.(var6125_ .(var29713_ var13688_)) var55125_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ .(var29713_ var13688_)) NIL));"
+2,3,8,2.2058,0.4275,".(C NIL) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));\n.(C .(.(CONS .(DIGIT 4)) var61451_)) = .(C var61451_);\n.(var55142_ .(.(var6125_ .(var29713_ var13688_)) var55125_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ .(var29713_ var13688_)) NIL));"
+2,3,9,2.2147,0.4364,".(C .(.(CONS .(var81298_ NIL)) var70747_)) = var70747_;\n.(C var64292_) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) var64292_));\n.(var9440_ .(.(var6125_ var9436_) var9438_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ var9436_) NIL));"
+2,4,0,1.7905,0.0122,".(C var64229_) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));"
+2,4,1,2.0204,0.2421,".(C NIL) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));\n.(var55142_ .(.(var6125_ .(var29713_ var13688_)) var55125_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ .(var29713_ var13688_)) NIL));"
+2,4,2,2.0446,0.2663,".(var64282_ .(.(var6125_ var9436_) var9438_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ var9436_) NIL));\n.(var64284_ NIL) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));"
+2,4,3,2.0556,0.2773,".(C var64292_) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) var64292_));\n.(var9440_ .(.(var6125_ var9436_) var9438_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ var9436_) NIL));"
+2,4,4,2.0799,0.3016,".(C var86889_) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) var86889_));\n.(var55142_ .(.(var6125_ .(var29713_ var13688_)) var55125_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ .(var29713_ var13688_)) NIL));"
+2,4,5,2.0840,0.3057,".(var64898_ .(.(var6125_ .(var29713_ var13688_)) var353_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ .(var29713_ var13688_)) NIL));\n.(var64900_ NIL) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));"
+2,4,6,2.0909,0.3126,".(var37774_ .(var37082_ .(.(var8496_ .(var37766_ var37770_)) var37768_))) = .(.(var8496_ .(.(DECC .(var37766_ 1)) 6)) .(var37082_ NIL));\n.(C var65508_) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));"
+2,4,7,2.2058,0.4275,".(C NIL) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));\n.(C .(.(CONS .(DIGIT 8)) var61444_)) = .(C var61444_);\n.(var55142_ .(.(var6125_ .(var29713_ var13688_)) var55125_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ .(var29713_ var13688_)) NIL));"
+2,4,8,2.2058,0.4275,".(C NIL) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));\n.(C .(.(CONS .(DIGIT 0)) var61448_)) = .(C var61448_);\n.(var55142_ .(.(var6125_ .(var29713_ var13688_)) var55125_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ .(var29713_ var13688_)) NIL));"
+2,4,9,2.2058,0.4275,".(C NIL) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));\n.(C .(.(CONS .(DIGIT 4)) var61451_)) = .(C var61451_);\n.(var55142_ .(.(var6125_ .(var29713_ var13688_)) var55125_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ .(var29713_ var13688_)) NIL));"
+2,5,0,1.7905,0.0122,".(C var64229_) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));"
+2,5,1,2.0204,0.2421,".(C NIL) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));\n.(var55142_ .(.(var6125_ .(var29713_ var13688_)) var55125_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ .(var29713_ var13688_)) NIL));"
+2,5,2,2.0446,0.2663,".(var64282_ .(.(var6125_ var9436_) var9438_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ var9436_) NIL));\n.(var64284_ NIL) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));"
+2,5,3,2.0556,0.2773,".(C var64292_) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) var64292_));\n.(var9440_ .(.(var6125_ var9436_) var9438_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ var9436_) NIL));"
+2,5,4,2.0799,0.3016,".(C var86889_) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) var86889_));\n.(var55142_ .(.(var6125_ .(var29713_ var13688_)) var55125_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ .(var29713_ var13688_)) NIL));"
+2,5,5,2.0840,0.3057,".(var64898_ .(.(var6125_ .(var29713_ var13688_)) var353_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ .(var29713_ var13688_)) NIL));\n.(var64900_ NIL) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));"
+2,5,6,2.0909,0.3126,".(var37774_ .(var37082_ .(.(var8496_ .(var37766_ var37770_)) var37768_))) = .(.(var8496_ .(.(DECC .(var37766_ 1)) 6)) .(var37082_ NIL));\n.(C var65508_) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));"
+2,5,7,2.2058,0.4275,".(C NIL) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));\n.(C .(.(CONS .(DIGIT 8)) var61444_)) = .(C var61444_);\n.(var55142_ .(.(var6125_ .(var29713_ var13688_)) var55125_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ .(var29713_ var13688_)) NIL));"
+2,5,8,2.2058,0.4275,".(C NIL) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));\n.(C .(.(CONS .(DIGIT 0)) var61448_)) = .(C var61448_);\n.(var55142_ .(.(var6125_ .(var29713_ var13688_)) var55125_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ .(var29713_ var13688_)) NIL));"
+2,5,9,2.2058,0.4275,".(C NIL) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));\n.(C .(.(CONS .(DIGIT 4)) var61451_)) = .(C var61451_);\n.(var55142_ .(.(var6125_ .(var29713_ var13688_)) var55125_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ .(var29713_ var13688_)) NIL));"
+2,6,0,1.7905,0.0122,".(C var64229_) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));"
+2,6,1,2.0053,0.2270,".(C .(.(CONS .(DIGIT 4)) var61451_)) = .(C var61451_);\n.(C var65508_) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));"
+2,6,2,2.0204,0.2421,".(C NIL) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));\n.(var55142_ .(.(var6125_ .(var29713_ var13688_)) var55125_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ .(var29713_ var13688_)) NIL));"
+2,6,3,2.0446,0.2663,".(var64282_ .(.(var6125_ var9436_) var9438_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ var9436_) NIL));\n.(var64284_ NIL) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));"
+2,6,4,2.0556,0.2773,".(C var64292_) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) var64292_));\n.(var9440_ .(.(var6125_ var9436_) var9438_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ var9436_) NIL));"
+2,6,5,2.0775,0.2992,".(C NIL) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));\n.(var37774_ .(var37082_ .(.(var8496_ .(var37766_ var37770_)) var37768_))) = .(.(var8496_ .(.(DECC .(var37766_ 1)) 6)) .(var37082_ NIL));"
+2,6,6,2.0799,0.3016,".(C var86889_) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) var86889_));\n.(var55142_ .(.(var6125_ .(var29713_ var13688_)) var55125_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ .(var29713_ var13688_)) NIL));"
+2,6,7,2.0840,0.3057,".(var64898_ .(.(var6125_ .(var29713_ var13688_)) var353_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ .(var29713_ var13688_)) NIL));\n.(var64900_ NIL) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));"
+2,6,8,2.0909,0.3126,".(var37774_ .(var37082_ .(.(var8496_ .(var37766_ var37770_)) var37768_))) = .(.(var8496_ .(.(DECC .(var37766_ 1)) 6)) .(var37082_ NIL));\n.(C var65508_) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));"
+2,6,9,2.0938,0.3154,".(var55142_ .(.(var6125_ .(var29713_ var13688_)) var55125_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ .(var29713_ var13688_)) NIL));\n.(C var65508_) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));"
+2,7,0,1.7905,0.0122,".(C var64229_) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));"
+2,7,1,2.0053,0.2270,".(C .(.(CONS .(DIGIT 4)) var61451_)) = .(C var61451_);\n.(C var65508_) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));"
+2,7,2,2.0204,0.2421,".(C NIL) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));\n.(var55142_ .(.(var6125_ .(var29713_ var13688_)) var55125_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ .(var29713_ var13688_)) NIL));"
+2,7,3,2.0446,0.2663,".(var64282_ .(.(var6125_ var9436_) var9438_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ var9436_) NIL));\n.(var64284_ NIL) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));"
+2,7,4,2.0556,0.2773,".(C var64292_) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) var64292_));\n.(var9440_ .(.(var6125_ var9436_) var9438_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ var9436_) NIL));"
+2,7,5,2.0556,0.2773,".(C NIL) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));\n.(var64282_ .(.(var6125_ var9436_) var9438_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ var9436_) NIL));"
+2,7,6,2.0775,0.2992,".(C NIL) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));\n.(var37774_ .(var37082_ .(.(var8496_ .(var37766_ var37770_)) var37768_))) = .(.(var8496_ .(.(DECC .(var37766_ 1)) 6)) .(var37082_ NIL));"
+2,7,7,2.0799,0.3016,".(C var86889_) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) var86889_));\n.(var55142_ .(.(var6125_ .(var29713_ var13688_)) var55125_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ .(var29713_ var13688_)) NIL));"
+2,7,8,2.0840,0.3057,".(var64898_ .(.(var6125_ .(var29713_ var13688_)) var353_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ .(var29713_ var13688_)) NIL));\n.(var64900_ NIL) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));"
+2,7,9,2.0909,0.3126,".(var37774_ .(var37082_ .(.(var8496_ .(var37766_ var37770_)) var37768_))) = .(.(var8496_ .(.(DECC .(var37766_ 1)) 6)) .(var37082_ NIL));\n.(C var65508_) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));"
+2,8,0,1.7905,0.0122,".(C var64229_) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));"
+2,8,1,2.0053,0.2270,".(C .(.(CONS .(DIGIT 4)) var61451_)) = .(C var61451_);\n.(C var65508_) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));"
+2,8,2,2.0204,0.2421,".(C NIL) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));\n.(var55142_ .(.(var6125_ .(var29713_ var13688_)) var55125_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ .(var29713_ var13688_)) NIL));"
+2,8,3,2.0446,0.2663,".(var64282_ .(.(var6125_ var9436_) var9438_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ var9436_) NIL));\n.(var64284_ NIL) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));"
+2,8,4,2.0556,0.2773,".(C var64292_) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) var64292_));\n.(var9440_ .(.(var6125_ var9436_) var9438_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ var9436_) NIL));"
+2,8,5,2.0556,0.2773,".(C NIL) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));\n.(var64282_ .(.(var6125_ var9436_) var9438_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ var9436_) NIL));"
+2,8,6,2.0711,0.2928,".(var152917_ NIL) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));\n.(var152918_ .(.(var6125_ var9436_) var9438_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ var9436_) NIL));"
+2,8,7,2.0775,0.2992,".(C NIL) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));\n.(var37774_ .(var37082_ .(.(var8496_ .(var37766_ var37770_)) var37768_))) = .(.(var8496_ .(.(DECC .(var37766_ 1)) 6)) .(var37082_ NIL));"
+2,8,8,2.0799,0.3016,".(C var86889_) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) var86889_));\n.(var55142_ .(.(var6125_ .(var29713_ var13688_)) var55125_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ .(var29713_ var13688_)) NIL));"
+2,8,9,2.0821,0.3038,".(var64282_ .(.(var6125_ var9436_) var9438_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ var9436_) NIL));\n.(C var138159_) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));"
+2,9,0,1.7905,0.0122,".(C var64229_) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));"
+2,9,1,2.0053,0.2270,".(C .(.(CONS .(DIGIT 4)) var61451_)) = .(C var61451_);\n.(C var65508_) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));"
+2,9,2,2.0204,0.2421,".(C NIL) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));\n.(var55142_ .(.(var6125_ .(var29713_ var13688_)) var55125_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ .(var29713_ var13688_)) NIL));"
+2,9,3,2.0417,0.2634,".(var157626_ .(.(var6125_ var9436_) var9438_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ var9436_) NIL));\n.(var157627_ var138159_) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));"
+2,9,4,2.0446,0.2663,".(var64282_ .(.(var6125_ var9436_) var9438_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ var9436_) NIL));\n.(var64284_ NIL) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));"
+2,9,5,2.0556,0.2773,".(C var64292_) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) var64292_));\n.(var9440_ .(.(var6125_ var9436_) var9438_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ var9436_) NIL));"
+2,9,6,2.0556,0.2773,".(C NIL) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));\n.(var64282_ .(.(var6125_ var9436_) var9438_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ var9436_) NIL));"
+2,9,7,2.0689,0.2906,".(var161632_ NIL) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));\n.(var161633_ .(.(var6125_ .(var29713_ var13688_)) var55125_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ .(var29713_ var13688_)) NIL));"
+2,9,8,2.0711,0.2928,".(var152917_ NIL) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));\n.(var152918_ .(.(var6125_ var9436_) var9438_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ var9436_) NIL));"
+2,9,9,2.0775,0.2992,".(C NIL) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));\n.(var37774_ .(var37082_ .(.(var8496_ .(var37766_ var37770_)) var37768_))) = .(.(var8496_ .(.(DECC .(var37766_ 1)) 6)) .(var37082_ NIL));"
+3,0,0,2.4836,0.0000,".(C var64229_) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));"
+3,0,1,2.6927,0.2091,".(C .(.(CONS .(DIGIT 4)) var61451_)) = .(C var61451_);\n.(C var65508_) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));"
+3,0,2,2.7487,0.2651,".(C var64292_) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) var64292_));\n.(var9440_ .(.(var6125_ var9436_) var9438_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ var9436_) NIL));"
+3,0,3,3.6201,1.1365,".(C .(.(CONS .(DIGIT 4)) NIL)) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));\n.(C var168968_) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) var168968_));\n.(var157626_ .(.(var6125_ var9436_) var9438_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ var9436_) NIL));\n.(var157627_ var138159_) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));"
+3,0,4,5.6785,3.1949,".(C NIL) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));\n.(C .(.(CONS .(.(DECC .(DIGIT 2)) 5)) var168440_)) = .(C var168440_);\n.(C .(.(CONS .(DIGIT 4)) var168448_)) = .(C var168448_);\n.(C .(.(CONS .(.(DECC .(DIGIT 4)) 8)) var168447_)) = .(C var168447_);\n.(C .(.(CONS .(DIGIT 0)) var168445_)) = .(C var168445_);\n.(C .(.(CONS .(.(DECC .(DIGIT 1)) 0)) var168444_)) = .(C var168444_);\n.(C .(.(CONS .(.(DECC .(DIGIT 2)) 8)) var168442_)) = .(C var168442_);\n.(C .(.(CONS .(DIGIT 8)) var168441_)) = .(C var168441_);\n.(C .(.(CONS .(.(DECC .(DIGIT 3)) 7)) var168449_)) = .(C var168449_);\n.(C .(.(CONS .(.(DECC .(DIGIT 1)) 1)) var168457_)) = .(C var168457_);\n.(C .(.(CONS .(DIGIT 5)) var168456_)) = .(C var168456_);\n.(C .(.(CONS .(DIGIT 9)) var168452_)) = .(C var168452_);\n.(C .(.(CONS .(DIGIT 6)) var168451_)) = .(C var168451_);\n.(C .(.(CONS .(DIGIT 1)) var168450_)) = .(C var168450_);"
+3,0,5,6.0530,3.5694,".(C NIL) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));\n.(C .(.(CONS .(.(DECC .(DIGIT 1)) 0)) NIL)) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));\n.(C .(.(CONS .(.(DECC .(DIGIT 2)) 5)) .(.(CONS .(DIGIT 8)) .(.(CONS .(.(DECC .(DIGIT 2)) 8)) .(.(CONS .(DIGIT 8)) .(.(CONS .(.(DECC .(DIGIT 1)) 0)) .(.(CONS .(DIGIT 0)) .(.(CONS .(DIGIT 0)) .(.(CONS .(.(DECC .(DIGIT 4)) 8)) .(.(CONS .(DIGIT 4)) var168528_)))))))))) = .(C var168528_);\n.(C .(.(CONS .(.(DECC .(DIGIT 3)) 7)) .(.(CONS .(DIGIT 1)) .(.(CONS .(DIGIT 6)) .(.(CONS .(DIGIT 9)) .(.(CONS .(.(DECC .(DIGIT 1)) 0)) .(.(CONS .(DIGIT 4)) .(.(CONS .(DIGIT 6)) .(.(CONS .(DIGIT 5)) .(.(CONS .(.(DECC .(DIGIT 1)) 1)) var168529_)))))))))) = .(C var168529_);"
+3,0,6,6.1357,3.6521,".(C .(.(CONS .(DIGIT 0)) .(.(CONS .(DIGIT 0)) .(.(CONS .(.(DECC .(DIGIT 4)) 8)) .(.(CONS .(DIGIT 4)) NIL))))) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));\n.(C NIL) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));\n.(C .(.(CONS .(.(DECC .(DIGIT 2)) 5)) .(.(CONS .(DIGIT 8)) .(.(CONS .(.(DECC .(DIGIT 2)) 8)) .(.(CONS .(DIGIT 8)) .(.(CONS .(.(DECC .(DIGIT 1)) 0)) var168502_)))))) = .(C var168502_);\n.(C .(.(CONS .(.(DECC .(DIGIT 3)) 7)) .(.(CONS .(DIGIT 1)) .(.(CONS .(DIGIT 6)) .(.(CONS .(DIGIT 9)) .(.(CONS .(.(DECC .(DIGIT 1)) 0)) var168503_)))))) = .(C var168503_);\n.(C .(.(CONS .(DIGIT 4)) .(.(CONS .(DIGIT 6)) .(.(CONS .(DIGIT 5)) .(.(CONS .(.(DECC .(DIGIT 1)) 1)) .(.(CONS .(.(DECC .(DIGIT 1)) 0)) var168504_)))))) = .(C var168504_);"
+3,0,7,6.3389,3.8553,".(C NIL) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));\n.(C .(.(CONS .(.(DECC .(DIGIT 2)) 5)) var168440_)) = .(C var168440_);\n.(C .(.(CONS .(DIGIT 4)) var168448_)) = .(C var168448_);\n.(C .(.(CONS .(.(DECC .(DIGIT 4)) 8)) var168447_)) = .(C var168447_);\n.(C .(.(CONS .(DIGIT 0)) var168445_)) = .(C var168445_);\n.(C .(.(CONS .(.(DECC .(DIGIT 1)) 0)) var168444_)) = .(C var168444_);\n.(C .(.(CONS .(.(DECC .(DIGIT 2)) 8)) var168442_)) = .(C var168442_);\n.(C .(.(CONS .(DIGIT 8)) var168441_)) = .(C var168441_);\n.(C .(.(CONS .(.(DECC .(DIGIT 3)) 7)) var168449_)) = .(C var168449_);\n.(C .(.(CONS .(.(DECC .(DIGIT 1)) 1)) var168457_)) = .(C var168457_);\n.(C .(.(CONS .(DIGIT 5)) var168456_)) = .(C var168456_);\n.(C .(.(CONS .(DIGIT 9)) var168452_)) = .(C var168452_);\n.(C .(.(CONS .(DIGIT 6)) var168451_)) = .(C var168451_);\n.(C .(.(CONS .(DIGIT 1)) var168450_)) = .(C var168450_);\n.(var161632_ NIL) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));\n.(var161633_ .(.(var6125_ .(var29713_ var13688_)) var55125_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ .(var29713_ var13688_)) NIL));"
+3,0,8,6.4850,4.0014,".(C .(.(CONS .(DIGIT 4)) NIL)) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));\n.(C NIL) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));\n.(C .(.(CONS .(.(DECC .(DIGIT 2)) 5)) .(.(CONS .(DIGIT 8)) var168807_))) = .(C var168807_);\n.(C .(.(CONS .(DIGIT 0)) .(.(CONS .(.(DECC .(DIGIT 4)) 8)) var168810_))) = .(C var168810_);\n.(C .(.(CONS .(.(DECC .(DIGIT 1)) 0)) .(.(CONS .(DIGIT 0)) var168809_))) = .(C var168809_);\n.(C .(.(CONS .(.(DECC .(DIGIT 2)) 8)) .(.(CONS .(DIGIT 8)) var168808_))) = .(C var168808_);\n.(C .(.(CONS .(.(DECC .(DIGIT 3)) 7)) .(.(CONS .(DIGIT 1)) var168811_))) = .(C var168811_);\n.(C .(.(CONS .(var170433_ 1)) .(.(CONS .(var170433_ 0)) var168815_))) = .(C var168815_);\n.(C .(.(CONS .(var170434_ 6)) .(.(CONS .(var170434_ 5)) var168814_))) = .(C var168814_);\n.(C .(.(CONS .(.(DECC .(DIGIT 1)) 0)) .(.(CONS .(DIGIT 4)) var168813_))) = .(C var168813_);\n.(C .(.(CONS .(var170435_ 6)) .(.(CONS .(var170435_ 9)) var168812_))) = .(C var168812_);"
+3,0,9,6.5186,4.0350,".(C .(.(CONS .(DIGIT 4)) NIL)) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));\n.(C NIL) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));\n.(C .(.(CONS .(.(DECC .(DIGIT 2)) 5)) .(.(CONS .(DIGIT 8)) var168807_))) = .(C var168807_);\n.(C .(.(CONS .(DIGIT 0)) .(.(CONS .(.(DECC .(DIGIT 4)) 8)) var168810_))) = .(C var168810_);\n.(C .(.(CONS .(.(DECC .(DIGIT 1)) 0)) .(.(CONS .(DIGIT 0)) var168809_))) = .(C var168809_);\n.(C .(.(CONS .(.(DECC .(DIGIT 2)) 8)) .(.(CONS .(DIGIT 8)) var168808_))) = .(C var168808_);\n.(C .(.(CONS .(.(DECC .(DIGIT 3)) 7)) .(.(CONS .(DIGIT 1)) var168811_))) = .(C var168811_);\n.(C .(.(CONS .(.(var171566_ var171565_) var170437_)) .(.(CONS .(.(var171566_ var171565_) 0)) var168815_))) = .(C var168815_);\n.(C .(.(CONS .(DIGIT 6)) .(.(CONS .(DIGIT 5)) var168814_))) = .(C var168814_);\n.(C .(.(CONS .(.(DECC .(DIGIT 1)) 0)) .(.(CONS .(DIGIT 4)) var168813_))) = .(C var168813_);\n.(C .(.(CONS .(DIGIT 6)) .(.(CONS .(DIGIT 9)) var168812_))) = .(C var168812_);"
+3,1,0,2.4836,0.0000,".(C var64229_) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));"
+3,1,1,2.6927,0.2091,".(C .(.(CONS .(DIGIT 4)) var61451_)) = .(C var61451_);\n.(C var65508_) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));"
+3,1,2,2.7487,0.2651,".(C var64292_) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) var64292_));\n.(var9440_ .(.(var6125_ var9436_) var9438_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ var9436_) NIL));"
+3,1,3,3.6201,1.1365,".(C .(.(CONS .(DIGIT 4)) NIL)) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));\n.(C var168968_) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) var168968_));\n.(var157626_ .(.(var6125_ var9436_) var9438_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ var9436_) NIL));\n.(var157627_ var138159_) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));"
+3,1,4,5.6785,3.1949,".(C NIL) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));\n.(C .(.(CONS .(.(DECC .(DIGIT 2)) 5)) var168440_)) = .(C var168440_);\n.(C .(.(CONS .(DIGIT 4)) var168448_)) = .(C var168448_);\n.(C .(.(CONS .(.(DECC .(DIGIT 4)) 8)) var168447_)) = .(C var168447_);\n.(C .(.(CONS .(DIGIT 0)) var168445_)) = .(C var168445_);\n.(C .(.(CONS .(.(DECC .(DIGIT 1)) 0)) var168444_)) = .(C var168444_);\n.(C .(.(CONS .(.(DECC .(DIGIT 2)) 8)) var168442_)) = .(C var168442_);\n.(C .(.(CONS .(DIGIT 8)) var168441_)) = .(C var168441_);\n.(C .(.(CONS .(.(DECC .(DIGIT 3)) 7)) var168449_)) = .(C var168449_);\n.(C .(.(CONS .(.(DECC .(DIGIT 1)) 1)) var168457_)) = .(C var168457_);\n.(C .(.(CONS .(DIGIT 5)) var168456_)) = .(C var168456_);\n.(C .(.(CONS .(DIGIT 9)) var168452_)) = .(C var168452_);\n.(C .(.(CONS .(DIGIT 6)) var168451_)) = .(C var168451_);\n.(C .(.(CONS .(DIGIT 1)) var168450_)) = .(C var168450_);"
+3,1,5,5.7717,3.2881,".(C NIL) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));\n.(C .(.(CONS .(.(DECC .(DIGIT 2)) 5)) var168440_)) = .(C var168440_);\n.(C .(.(CONS .(DIGIT 4)) var168448_)) = .(C var168448_);\n.(C .(.(CONS .(.(DECC .(DIGIT 4)) 8)) var168447_)) = .(C var168447_);\n.(C .(.(CONS .(DIGIT 0)) var168445_)) = .(C var168445_);\n.(C .(.(CONS .(.(DECC .(DIGIT 1)) 0)) var168444_)) = .(C var168444_);\n.(C .(.(CONS .(.(DECC .(DIGIT 2)) 8)) var168442_)) = .(C var168442_);\n.(C .(.(CONS .(DIGIT 8)) var168441_)) = .(C var168441_);\n.(C .(.(CONS .(.(DECC .(DIGIT 3)) 7)) var168449_)) = .(C var168449_);\n.(C .(.(CONS .(.(DECC .(DIGIT var173255_)) var173255_)) var168457_)) = .(C var168457_);\n.(C .(.(CONS .(DIGIT 5)) var168456_)) = .(C var168456_);\n.(C .(.(CONS .(DIGIT 9)) var168452_)) = .(C var168452_);\n.(C .(.(CONS .(DIGIT 6)) var168451_)) = .(C var168451_);\n.(C .(.(CONS .(DIGIT 1)) var168450_)) = .(C var168450_);\n.(var161632_ NIL) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));\n.(var161633_ .(.(var6125_ .(var29713_ var13688_)) var55125_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ .(var29713_ var13688_)) NIL));"
+3,1,6,6.0530,3.5694,".(C NIL) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));\n.(C .(.(CONS .(.(DECC .(DIGIT 1)) 0)) NIL)) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));\n.(C .(.(CONS .(.(DECC .(DIGIT 2)) 5)) .(.(CONS .(DIGIT 8)) .(.(CONS .(.(DECC .(DIGIT 2)) 8)) .(.(CONS .(DIGIT 8)) .(.(CONS .(.(DECC .(DIGIT 1)) 0)) .(.(CONS .(DIGIT 0)) .(.(CONS .(DIGIT 0)) .(.(CONS .(.(DECC .(DIGIT 4)) 8)) .(.(CONS .(DIGIT 4)) var168528_)))))))))) = .(C var168528_);\n.(C .(.(CONS .(.(DECC .(DIGIT 3)) 7)) .(.(CONS .(DIGIT 1)) .(.(CONS .(DIGIT 6)) .(.(CONS .(DIGIT 9)) .(.(CONS .(.(DECC .(DIGIT 1)) 0)) .(.(CONS .(DIGIT 4)) .(.(CONS .(DIGIT 6)) .(.(CONS .(DIGIT 5)) .(.(CONS .(.(DECC .(DIGIT 1)) 1)) var168529_)))))))))) = .(C var168529_);"
+3,1,7,6.1357,3.6521,".(C .(.(CONS .(DIGIT 0)) .(.(CONS .(DIGIT 0)) .(.(CONS .(.(DECC .(DIGIT 4)) 8)) .(.(CONS .(DIGIT 4)) NIL))))) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));\n.(C NIL) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));\n.(C .(.(CONS .(.(DECC .(DIGIT 2)) 5)) .(.(CONS .(DIGIT 8)) .(.(CONS .(.(DECC .(DIGIT 2)) 8)) .(.(CONS .(DIGIT 8)) .(.(CONS .(.(DECC .(DIGIT 1)) 0)) var168502_)))))) = .(C var168502_);\n.(C .(.(CONS .(.(DECC .(DIGIT 3)) 7)) .(.(CONS .(DIGIT 1)) .(.(CONS .(DIGIT 6)) .(.(CONS .(DIGIT 9)) .(.(CONS .(.(DECC .(DIGIT 1)) 0)) var168503_)))))) = .(C var168503_);\n.(C .(.(CONS .(DIGIT 4)) .(.(CONS .(DIGIT 6)) .(.(CONS .(DIGIT 5)) .(.(CONS .(.(DECC .(DIGIT 1)) 1)) .(.(CONS .(.(DECC .(DIGIT 1)) 0)) var168504_)))))) = .(C var168504_);"
+3,1,8,6.3389,3.8553,".(C NIL) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));\n.(C .(.(CONS .(.(DECC .(DIGIT 2)) 5)) var168440_)) = .(C var168440_);\n.(C .(.(CONS .(DIGIT 4)) var168448_)) = .(C var168448_);\n.(C .(.(CONS .(.(DECC .(DIGIT 4)) 8)) var168447_)) = .(C var168447_);\n.(C .(.(CONS .(DIGIT 0)) var168445_)) = .(C var168445_);\n.(C .(.(CONS .(.(DECC .(DIGIT 1)) 0)) var168444_)) = .(C var168444_);\n.(C .(.(CONS .(.(DECC .(DIGIT 2)) 8)) var168442_)) = .(C var168442_);\n.(C .(.(CONS .(DIGIT 8)) var168441_)) = .(C var168441_);\n.(C .(.(CONS .(.(DECC .(DIGIT 3)) 7)) var168449_)) = .(C var168449_);\n.(C .(.(CONS .(.(DECC .(DIGIT 1)) 1)) var168457_)) = .(C var168457_);\n.(C .(.(CONS .(DIGIT 5)) var168456_)) = .(C var168456_);\n.(C .(.(CONS .(DIGIT 9)) var168452_)) = .(C var168452_);\n.(C .(.(CONS .(DIGIT 6)) var168451_)) = .(C var168451_);\n.(C .(.(CONS .(DIGIT 1)) var168450_)) = .(C var168450_);\n.(var161632_ NIL) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));\n.(var161633_ .(.(var6125_ .(var29713_ var13688_)) var55125_)) = .(.(var6125_ .(.(DECC .(DIGIT 1)) 6)) .(.(var6125_ .(var29713_ var13688_)) NIL));"
+3,1,9,6.4850,4.0014,".(C .(.(CONS .(DIGIT 4)) NIL)) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));\n.(C NIL) = .(.(CONS .(.(DECC .(DIGIT 1)) 6)) .(.(CONS .(.(DECC .(DIGIT 2)) 5)) NIL));\n.(C .(.(CONS .(.(DECC .(DIGIT 2)) 5)) .(.(CONS .(DIGIT 8)) var168807_))) = .(C var168807_);\n.(C .(.(CONS .(DIGIT 0)) .(.(CONS .(.(DECC .(DIGIT 4)) 8)) var168810_))) = .(C var168810_);\n.(C .(.(CONS .(.(DECC .(DIGIT 1)) 0)) .(.(CONS .(DIGIT 0)) var168809_))) = .(C var168809_);\n.(C .(.(CONS .(.(DECC .(DIGIT 2)) 8)) .(.(CONS .(DIGIT 8)) var168808_))) = .(C var168808_);\n.(C .(.(CONS .(.(DECC .(DIGIT 3)) 7)) .(.(CONS .(DIGIT 1)) var168811_))) = .(C var168811_);\n.(C .(.(CONS .(var170433_ 1)) .(.(CONS .(var170433_ 0)) var168815_))) = .(C var168815_);\n.(C .(.(CONS .(var170434_ 6)) .(.(CONS .(var170434_ 5)) var168814_))) = .(C var168814_);\n.(C .(.(CONS .(.(DECC .(DIGIT 1)) 0)) .(.(CONS .(DIGIT 4)) var168813_))) = .(C var168813_);\n.(C .(.(CONS .(var170435_ 6)) .(.(CONS .(var170435_ 9)) var168812_))) = .(C var168812_);"
