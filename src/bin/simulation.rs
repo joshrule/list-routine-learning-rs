@@ -254,6 +254,7 @@ fn evolve<R: Rng>(
     params: &mut Params,
     rng: &mut R,
 ) -> Result<(), String> {
+    let ceiling = gpparams.n_delta;
     println!("n_data,generation,rank,nlposterior,h_star_nlposterior,trs");
     let max_op = lex
         .lexicon
@@ -316,8 +317,9 @@ fn evolve<R: Rng>(
             params.gp.n_delta =
                 ((params.gp.n_delta as f64) * params.simulation.confidence).ceil() as usize;
         } else {
-            params.gp.n_delta =
-                ((params.gp.n_delta as f64) * params.simulation.confidence.recip()).ceil() as usize;
+            params.gp.n_delta = ((params.gp.n_delta as f64) * params.simulation.confidence.recip())
+                .ceil()
+                .min(ceiling) as usize;
         }
         predictions.push((
             correct as usize,
