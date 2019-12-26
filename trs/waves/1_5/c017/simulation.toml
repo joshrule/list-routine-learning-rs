@@ -51,7 +51,7 @@ population_size = 10
 tournament_size = 1
 
 # generate 90 new offspring during each generation
-n_delta = 500
+n_delta = 300
 
 [model]
 
