@@ -29,6 +29,7 @@ fn main() {
     let start = Instant::now();
     let rng = &mut thread_rng();
     let mut params = exit_err(load_args(), "Failed to load parameters");
+    params.gp.population_size += 1; // +1 for memorized hypothesis
     notice("loaded parameters", 0);
 
     let mut lex = exit_err(
@@ -74,20 +75,11 @@ fn main() {
 
     notice("evolving", 0);
     let mut predictions = Vec::with_capacity(data.len());
-    let prediction = make_prediction(&pop, &data[0].lhs, &params);
-    predictions.push((
-        (prediction == data[0].rhs().unwrap()) as usize,
-        pop.len(),
-        data[0].lhs.pretty(&lex.signature()),
-        prediction.pretty(&lex.signature()),
-        data[0].rhs[0].pretty(&lex.signature()),
-    ));
     exit_err(
         evolve(
             &data[..params.simulation.n_examples],
             &mut predictions,
             &mut pop,
-            &h_star,
             &gp_lex,
             &mut params,
             rng,
@@ -231,16 +223,48 @@ fn make_prediction(pop: &[(TRS, f64)], input: &Term, params: &Params) -> Term {
         .term()
 }
 
+fn process_prediction(
+    data: &[Rule],
+    n_data: usize,
+    pop: &mut Vec<(TRS, f64)>,
+    params: &mut Params,
+    ceiling: usize,
+    predictions: &mut Vec<(usize, usize, String, String, String)>,
+    seen: &[TRS],
+    lex: &GPLexicon,
+) {
+    let input = &data[n_data].lhs;
+    let output = &data[n_data].rhs[0];
+    let prediction = make_prediction(pop, input, params);
+    let correct = prediction == *output;
+    if correct {
+        params.gp.n_delta =
+            ((params.gp.n_delta as f64) * params.simulation.confidence).ceil() as usize;
+        notice(format!("decreased n_delta to {}", params.gp.n_delta), 2);
+    } else {
+        params.gp.n_delta = ((params.gp.n_delta as f64) * params.simulation.confidence.recip())
+            .ceil()
+            .min(ceiling as f64) as usize;
+        notice(format!("increased n_delta to {}", params.gp.n_delta), 2);
+    }
+    predictions.push((
+        correct as usize,
+        seen.len(),
+        input.pretty(&lex.lexicon.signature()),
+        prediction.pretty(&lex.lexicon.signature()),
+        output.pretty(&lex.lexicon.signature()),
+    ));
+}
+
 fn evolve<R: Rng>(
     data: &[Rule],
     predictions: &mut Vec<(usize, usize, String, String, String)>,
     pop: &mut Vec<(TRS, f64)>,
-    h_star: &TRS,
     lex: &GPLexicon,
     params: &mut Params,
     rng: &mut R,
 ) -> Result<(), String> {
-    let ceiling = gpparams.n_delta;
+    let ceiling = params.gp.n_delta;
     notice("n_data,generation,rank,nlposterior,trs", 1);
     let max_op = lex
         .lexicon
@@ -250,7 +274,7 @@ fn evolve<R: Rng>(
         .map(|o| o.id())
         .max()
         .unwrap();
-    for n_data in 1..data.len() {
+    'data: for n_data in 0..data.len() {
         let examples = {
             let mut exs = vec![];
             for (i, datum) in data.iter().enumerate().take(n_data) {
@@ -263,19 +287,33 @@ fn evolve<R: Rng>(
             }
             exs
         };
-        let input = &data[n_data].lhs;
-        let output = &data[n_data].rhs[0];
+        let memorized = TRS::new_unchecked(&lex.lexicon, examples.clone());
         let task = task_by_rewrite(&examples, params.model, &lex.lexicon, examples.to_vec())
             .map_err(|_| "bad task".to_string())?;
-
         for i in pop.iter_mut() {
             i.1 = (task.oracle)(&lex.lexicon, &i.0);
         }
-        pop.sort_by(|x, y| x.1.partial_cmp(&y.1).unwrap_or(std::cmp::Ordering::Equal));
-        let h_star_lpost = (task.oracle)(&lex.lexicon, h_star);
+        let mem_score = (task.oracle)(&lex.lexicon, &memorized);
+        let mem_pair = (memorized, mem_score);
         let mut seen = vec![];
 
         for gen in 0..params.simulation.generations_per_datum {
+            if !pop.iter().any(|(x, _)| TRS::is_alpha(&mem_pair.0, x)) {
+                pop.sort_by(|x, y| x.1.partial_cmp(&y.1).expect("found NaN"));
+                pop.pop();
+                pop.push(mem_pair.clone());
+                pop.sort_by(|x, y| x.1.partial_cmp(&y.1).expect("found NaN"));
+            }
+            if gen == 0 && n_data == 0 {
+                for (i, (h, lpost)) in pop.iter().enumerate() {
+                    notice_flat(
+                        format!("{},{},{},{:.4},{:?}", n_data, gen, i, lpost, h.to_string()),
+                        1,
+                    );
+                }
+                process_prediction(data, n_data, pop, params, ceiling, predictions, &seen, lex);
+                continue 'data;
+            }
             let mut used_symbols = pop
                 .iter()
                 .flat_map(|p| p.0.utrs().operators())
@@ -292,23 +330,13 @@ fn evolve<R: Rng>(
                 );
             }
         }
-        let prediction = make_prediction(pop, input, params);
-        let correct = prediction == *output;
-        if correct {
-            params.gp.n_delta =
-                ((params.gp.n_delta as f64) * params.simulation.confidence).ceil() as usize;
-        } else {
-            params.gp.n_delta = ((params.gp.n_delta as f64) * params.simulation.confidence.recip())
-                .ceil()
-                .min(ceiling) as usize;
+        if !pop.iter().any(|(x, _)| TRS::is_alpha(&mem_pair.0, x)) {
+            pop.sort_by(|x, y| x.1.partial_cmp(&y.1).expect("found NaN"));
+            pop.pop();
+            pop.push(mem_pair.clone());
+            pop.sort_by(|x, y| x.1.partial_cmp(&y.1).expect("found NaN"));
         }
-        predictions.push((
-            correct as usize,
-            seen.len(),
-            input.pretty(&lex.lexicon.signature()),
-            prediction.pretty(&lex.lexicon.signature()),
-            output.pretty(&lex.lexicon.signature()),
-        ));
+        process_prediction(data, n_data, pop, params, ceiling, predictions, &seen, lex);
     }
     Ok(())
 }
