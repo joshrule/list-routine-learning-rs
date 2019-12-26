@@ -1,3 +1,4 @@
+use itertools::Itertools;
 use polytype::{ptp, tp, Context as TypeContext, TypeSchema};
 use programinduction::{
     trs::{parse_lexicon, GeneticParams, Lexicon, ModelParams},
@@ -8,12 +9,26 @@ use std::{fs::read_to_string, path::PathBuf, process::exit};
 use term_rewriting::{Operator, Rule, Term};
 
 pub fn start_section(s: &str) {
-    println!("\n{}\n{}", s, "-".repeat(s.len()));
+    println!("#\n# {}\n# {}", s, "-".repeat(s.len()));
+}
+
+pub fn notice_flat<T: std::fmt::Display>(t: T, n: usize) {
+    println!("#{}{}", " ".repeat(1 + 2 * n), t);
+}
+
+pub fn notice<T: std::fmt::Display>(t: T, n: usize) {
+    println!(
+        "{}",
+        t.to_string()
+            .lines()
+            .map(|s| format!("#{}{}", " ".repeat(1 + 2 * n), s))
+            .join("\n")
+    );
 }
 
 pub fn exit_err<T>(x: Result<T, String>, msg: &str) -> T {
     x.unwrap_or_else(|err| {
-        eprintln!("{}: {}", msg, err);
+        eprintln!("# {}: {}", msg, err);
         exit(1);
     })
 }

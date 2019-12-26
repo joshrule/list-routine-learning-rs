@@ -27,11 +27,10 @@ use term_rewriting::{trace::Trace, Operator, Rule, Term, TRS as UntypedTRS};
 
 fn main() {
     let start = Instant::now();
-    start_section("Loading parameters");
     let rng = &mut thread_rng();
     let mut params = exit_err(load_args(), "Failed to load parameters");
+    notice("loaded parameters", 0);
 
-    start_section("Loading lexicon");
     let mut lex = exit_err(
         load_lexicon(
             &params.simulation.problem_dir,
@@ -39,19 +38,15 @@ fn main() {
         ),
         "Failed to load lexicon",
     );
-    println!("{}", lex);
-    println!("{:?}", lex.context());
+    notice("loaded lexicon", 0);
+    notice(&lex, 1);
 
-    start_section("Loading data");
     let c = exit_err(identify_concept(&lex), "No target concept");
     let mut examples = exit_err(
         load_data(&params.simulation.problem_dir),
         "Problem loading data",
     );
     examples.shuffle(rng);
-    for example in &examples {
-        println!("{:?}", example);
-    }
     let data: Vec<_> = examples
         .iter()
         .map(|e| e.to_rule(&lex, c))
@@ -60,34 +55,24 @@ fn main() {
             eprintln!("Data conversion failed.");
             exit(1);
         });
+    notice("loaded data", 0);
+    notice(examples.iter().map(|e| format!("{:?}", e)).join("\n"), 1);
 
-    start_section("Loading H*");
     let h_star = exit_err(
         load_h_star(&params.simulation.problem_dir, &mut lex),
         "cannot load H*",
     );
-    println!("{}", h_star);
+    notice("loaded h_star", 0);
+    notice(h_star, 1);
 
-    {
-        let sig = lex.signature();
-        let operators = sig.operators();
-        println!(
-            "operators: [{}]",
-            operators.iter().map(|o| o.display(&sig)).join(", ")
-        )
-    }
-
-    start_section("Initial Population");
     let gp_lex = GPLexicon::new(&lex);
     let mut pop = exit_err(
         initialize_population(&gp_lex, &params, rng, &data[0].lhs),
         "couldn't initialize population",
     );
-    for (i, (trs, score)) in pop.iter().enumerate() {
-        println!("{}: {:.4} {:?}", i, score, trs.to_string());
-    }
+    notice("initialized population", 0);
 
-    start_section("Initial Prediction");
+    notice("evolving", 0);
     let mut predictions = Vec::with_capacity(data.len());
     let prediction = make_prediction(&pop, &data[0].lhs, &params);
     predictions.push((
@@ -97,8 +82,6 @@ fn main() {
         prediction.pretty(&lex.signature()),
         data[0].rhs[0].pretty(&lex.signature()),
     ));
-
-    start_section("Evolving");
     exit_err(
         evolve(
             &data[..params.simulation.n_examples],
@@ -111,16 +94,19 @@ fn main() {
         ),
         "evolution failed",
     );
-    println!();
-    println!("n,n_seen,accuracy,input,output,prediction");
+    notice("", 0);
+    println!("i_N,n_seen,accuracy,input,correct,predicted");
     for (n, (accuracy, n_seen, input, prediction, output)) in predictions.iter().enumerate() {
         println!(
             "{},{},{},\"{}\",\"{}\",\"{}\"",
             n, n_seen, accuracy, input, output, prediction
         );
     }
-    println!();
-    println!("total elapsed time: {:.3e}s", start.elapsed().as_secs_f64());
+    notice("", 0);
+    notice(
+        format!("total elapsed time: {:.3e}s", start.elapsed().as_secs_f64()),
+        0,
+    );
 }
 
 fn load_args() -> Result<Params, String> {
@@ -255,7 +241,7 @@ fn evolve<R: Rng>(
     rng: &mut R,
 ) -> Result<(), String> {
     let ceiling = gpparams.n_delta;
-    println!("n_data,generation,rank,nlposterior,h_star_nlposterior,trs");
+    notice("n_data,generation,rank,nlposterior,trs", 1);
     let max_op = lex
         .lexicon
         .signature()
@@ -300,14 +286,9 @@ fn evolve<R: Rng>(
             lex.clear();
             lex.evolve(&params.genetic, rng, &params.gp, &task, &mut seen, pop);
             for (i, (h, lpost)) in pop.iter().enumerate() {
-                println!(
-                    "{},{},{},{:.4},{:.4},{:?}",
-                    n_data,
-                    gen,
-                    i,
-                    lpost,
-                    lpost - h_star_lpost,
-                    h.to_string(),
+                notice_flat(
+                    format!("{},{},{},{:.4},{:?}", n_data, gen, i, lpost, h.to_string()),
+                    1,
                 );
             }
         }
