@@ -1,0 +1,153 @@
+    Finished release [optimized] target(s) in 0.09s
+     Running `target/release/simulation trs/waves/1_5/c004/simulation.toml`
+# loaded parameters
+# loaded lexicon
+#   Signature:
+#   C/0: list → list
+#   TRUE/0: bool
+#   FALSE/0: bool
+#   NIL/0: list
+#   CONS/0: nat → list → list
+#   0/0: digit
+#   1/0: digit
+#   2/0: digit
+#   3/0: digit
+#   4/0: digit
+#   5/0: digit
+#   6/0: digit
+#   7/0: digit
+#   8/0: digit
+#   9/0: digit
+#   DIGIT/0: digit → nat
+#   DECC/0: nat → digit → nat
+#   ./2: ∀t1. ∀t2. (t1 → t2) → t1 → t2
+#   EMPTY/0: list → bool
+#   EQUAL/0: ∀t0. t0 → t0 → bool
+#   HEAD/0: list → nat
+#   IF/0: ∀t0. bool → t0 → t0 → t0
+#   TAIL/0: list → list
+#   x_: t6
+#   y_: t7
+#   x_: t20
+#   x_: t30
+#   y_: t31
+#   x_: t41
+#   y_: t42
+#   x_: t54
+#   y_: t55
+#   x_: t68
+#   y_: t69
+#   x_: t88
+#   y_: t89
+#   
+#   Background: 9
+#   EMPTY [] = TRUE
+#   EMPTY (CONS x_ y_) = FALSE
+#   EQUAL x_ x_ = TRUE
+#   EQUAL x_ y_ = FALSE
+#   HEAD (CONS x_ y_) = x_
+#   IF TRUE x_ y_ = x_
+#   IF FALSE x_ y_ = y_
+#   TAIL [] = []
+#   TAIL (CONS x_ y_) = y_
+#   
+#   Templates: 4
+#   C (CONS [!] [!]) = [!]
+#   C [] = [!]
+#   C [!] = [!]
+#   [!] = [!]
+#   
+#   Deterministic: true
+# loaded data
+#   Datum { i: IntList([4, 3, 52, 71, 6, 9, 55]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+#   Datum { i: IntList([88, 63, 9, 14, 6]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+#   Datum { i: IntList([3, 36, 5]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+#   Datum { i: IntList([33, 8, 0, 17]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+#   Datum { i: IntList([26, 10, 1, 1]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+#   Datum { i: IntList([2, 23, 3, 8, 85, 48]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+#   Datum { i: IntList([65, 4, 13, 65]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+#   Datum { i: IntList([20]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+#   Datum { i: IntList([3, 42, 28]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+#   Datum { i: IntList([17, 78, 0, 70, 7, 4, 4, 8, 12, 47]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+#   Datum { i: IntList([10, 45, 33, 35, 1, 45, 28]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+#   Datum { i: IntList([21, 59, 41]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+#   Datum { i: IntList([15, 10, 1, 9, 88, 6, 8, 91, 4, 95]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+#   Datum { i: IntList([4, 24, 54, 48, 12, 0, 49]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+#   Datum { i: IntList([4, 4, 85, 0]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+#   Datum { i: IntList([94, 38, 5, 5, 5, 61]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+#   Datum { i: IntList([83]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+#   Datum { i: IntList([8, 5, 96, 74]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+#   Datum { i: IntList([22, 10, 10, 18, 65]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+#   Datum { i: IntList([9, 19, 0, 7, 1]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+#   Datum { i: IntList([7, 3, 50, 71, 6]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+#   Datum { i: IntList([2, 67, 27, 71, 97, 3, 8]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+#   Datum { i: IntList([4, 1, 74, 4, 6, 86]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+#   Datum { i: IntList([79, 9, 5, 72, 1, 83, 9, 96, 0]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+#   Datum { i: IntList([55, 1, 6, 2]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+#   Datum { i: IntList([17, 8, 99, 41, 12, 92, 22, 2, 5]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+#   Datum { i: IntList([1, 0, 3, 39, 3, 47, 10, 10, 82]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+#   Datum { i: IntList([13, 33, 29]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+#   Datum { i: IntList([]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+#   Datum { i: IntList([89, 8, 57, 3, 17, 3, 2, 2, 6, 5]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+#   Datum { i: IntList([0, 22, 40]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+#   Datum { i: IntList([65, 8, 0, 0, 97, 97, 16]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+#   Datum { i: IntList([8, 3, 8, 6, 8, 32]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+#   Datum { i: IntList([5, 1]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+#   Datum { i: IntList([7]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+#   Datum { i: IntList([10]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+#   Datum { i: IntList([1, 2, 5, 3, 80]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+#   Datum { i: IntList([1, 9, 6, 14]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+#   Datum { i: IntList([17, 4, 23, 6, 8, 8, 3, 56, 1]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+#   Datum { i: IntList([48, 9, 3, 26, 61]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+#   Datum { i: IntList([9, 3, 58, 10, 48, 29, 8, 71, 29, 77]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+#   Datum { i: IntList([37, 9, 10, 50]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+#   Datum { i: IntList([4, 83, 2, 9]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+#   Datum { i: IntList([7, 1, 5, 15, 24]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+#   Datum { i: IntList([8, 5, 50, 7, 3, 5, 6]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+#   Datum { i: IntList([74, 3, 6, 8, 61, 2, 3]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+#   Datum { i: IntList([3, 1, 5]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+#   Datum { i: IntList([2, 55, 1, 94, 40, 82, 5, 11]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+#   Datum { i: IntList([81, 0]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+#   Datum { i: IntList([80, 2, 8]), o: IntList([11, 19, 24, 33, 42, 5, 82, 0, 64, 9]) }
+# loaded h_star
+#   .(C xs_) = .(.(CONS .(.(DECC .(DIGIT 1)) 1)) .(.(CONS .(.(DECC .(DIGIT 1)) 9)) .(.(CONS .(.(DECC .(DIGIT 2)) 4)) .(.(CONS .(.(DECC .(DIGIT 3)) 3)) .(.(CONS .(.(DECC .(DIGIT 4)) 2)) .(.(CONS .(DIGIT 5)) .(.(CONS .(.(DECC .(DIGIT 8)) 2)) .(.(CONS .(DIGIT 0)) .(.(CONS .(.(DECC .(DIGIT 6)) 4)) .(.(CONS .(DIGIT 9)) NIL))))))))));
+# initialized population
+# evolving
+#   n_data,generation,rank,nlposterior,trs
+#   0,0,0,0.0000,""
+#   0,0,1,0.0200,"C = TAIL;"
+#   0,0,2,0.0400,".(C var14_) = NIL;"
+#   0,0,3,0.0400,".(C var46_) = var46_;"
+#   0,0,4,0.0400,".(var56_ var57_) = var57_;"
+#   0,0,5,0.0600,".(C .(var15_ var16_)) = var16_;"
+#   0,0,6,0.0600,".(C .(var139_ var140_)) = NIL;"
+#   0,0,7,0.0800,".(C .(.(CONS var32_) var33_)) = NIL;"
+#   0,0,8,0.0800,".(C .(.(CONS var37_) var38_)) = var38_;"
+#   0,0,9,0.1000,".(C .(.(CONS .(DIGIT var95_)) var96_)) = var96_;"
+#   0,0,10,0.1000,".(C .(.(CONS var184_) var185_)) = .(TAIL NIL);"
+#     increased n_delta to 300
+#   1,0,0,3.2777,".(var2942_ var2941_) = .(.(CONS .(.(DECC .(DIGIT 1)) 1)) .(.(CONS .(.(DECC .(DIGIT 1)) 9)) .(.(CONS .(.(DECC .(DIGIT 2)) 4)) .(.(CONS .(.(DECC .(DIGIT 3)) 3)) .(.(CONS .(.(DECC .(DIGIT 4)) 2)) .(.(CONS .(DIGIT 5)) .(.(CONS .(.(DECC .(DIGIT 8)) 2)) .(.(CONS .(DIGIT 0)) .(.(CONS .(.(DECC .(DIGIT 6)) 4)) .(.(CONS .(DIGIT 9)) NIL))))))))));"
+#   1,0,1,3.2777,".(C var2395_) = .(.(CONS .(.(DECC .(DIGIT 1)) 1)) .(.(CONS .(.(DECC .(DIGIT 1)) 9)) .(.(CONS .(.(DECC .(DIGIT 2)) 4)) .(.(CONS .(.(DECC .(DIGIT 3)) 3)) .(.(CONS .(.(DECC .(DIGIT 4)) 2)) .(.(CONS .(DIGIT 5)) .(.(CONS .(.(DECC .(DIGIT 8)) 2)) .(.(CONS .(DIGIT 0)) .(.(CONS .(.(DECC .(DIGIT 6)) 4)) .(.(CONS .(DIGIT 9)) NIL))))))))));"
+#   1,0,2,3.3377,".(C .(.(CONS .(DIGIT 4)) var2403_)) = .(.(CONS .(.(DECC .(DIGIT 1)) 1)) .(.(CONS .(.(DECC .(DIGIT 1)) 9)) .(.(CONS .(.(DECC .(DIGIT 2)) 4)) .(.(CONS .(.(DECC .(DIGIT 3)) 3)) .(.(CONS .(.(DECC .(DIGIT 4)) 2)) .(.(CONS .(DIGIT 5)) .(.(CONS .(.(DECC .(DIGIT 8)) 2)) .(.(CONS .(DIGIT 0)) .(.(CONS .(.(DECC .(DIGIT 6)) 4)) .(.(CONS .(DIGIT 9)) NIL))))))))));"
+#   1,0,3,3.3977,".(C .(.(CONS .(DIGIT 4)) .(.(CONS .(DIGIT 3)) var2424_))) = .(.(CONS .(.(DECC .(DIGIT 1)) 1)) .(.(CONS .(.(DECC .(DIGIT 1)) 9)) .(.(CONS .(.(DECC .(DIGIT 2)) 4)) .(.(CONS .(.(DECC .(DIGIT 3)) 3)) .(.(CONS .(.(DECC .(DIGIT 4)) 2)) .(.(CONS .(DIGIT 5)) .(.(CONS .(.(DECC .(DIGIT 8)) 2)) .(.(CONS .(DIGIT 0)) .(.(CONS .(.(DECC .(DIGIT 6)) 4)) .(.(CONS .(DIGIT 9)) NIL))))))))));"
+#   1,0,4,3.4577,".(C .(.(CONS .(DIGIT 3)) var1612_)) = NIL;\n.(C .(.(CONS .(DIGIT 4)) var1292_)) = .(.(CONS .(.(DECC .(DIGIT 1)) 1)) .(.(CONS .(.(DECC .(DIGIT 1)) 9)) .(.(CONS .(.(DECC .(DIGIT 2)) 4)) .(.(CONS .(.(DECC .(DIGIT 3)) 3)) .(.(CONS .(.(DECC .(DIGIT 4)) 2)) .(.(CONS .(DIGIT 5)) .(.(CONS .(.(DECC .(DIGIT 8)) 2)) .(.(CONS .(DIGIT 0)) .(.(CONS .(.(DECC .(DIGIT 6)) 4)) .(.(CONS .(DIGIT 9)) .(C var1292_)))))))))));"
+#   1,0,5,3.4977,".(C .(.(CONS .(DIGIT 4)) .(.(CONS .(DIGIT 3)) .(.(CONS .(.(DECC .(DIGIT 5)) 2)) var2408_)))) = .(.(CONS .(.(DECC .(DIGIT 1)) 1)) .(.(CONS .(.(DECC .(DIGIT 1)) 9)) .(.(CONS .(.(DECC .(DIGIT 2)) 4)) .(.(CONS .(.(DECC .(DIGIT 3)) 3)) .(.(CONS .(.(DECC .(DIGIT 4)) 2)) .(.(CONS .(DIGIT 5)) .(.(CONS .(.(DECC .(DIGIT 8)) 2)) .(.(CONS .(DIGIT 0)) .(.(CONS .(.(DECC .(DIGIT 6)) 4)) .(.(CONS .(DIGIT 9)) NIL))))))))));"
+#   1,0,6,3.5177,".(var2537_ .(.(var2504_ .(var2396_ var2506_)) .(.(var2504_ .(var2396_ var2514_)) .(.(var2504_ .(.(var2509_ var2512_) var2510_)) .(.(var2504_ .(var2526_ var2516_)) .(.(var2504_ var2508_) .(var2505_ var2520_))))))) = .(.(var2504_ .(.(var2509_ .(var2396_ var2516_)) var2516_)) .(.(var2504_ .(.(var2509_ .(var2396_ var2516_)) 9)) .(.(var2504_ .(.(var2509_ .(var2396_ var2510_)) var2506_)) .(.(var2504_ .(.(var2509_ .(var2396_ var2514_)) var2514_)) .(.(var2504_ .(.(var2509_ .(var2396_ var2506_)) var2510_)) .(.(var2504_ var2512_) .(.(var2504_ .(.(var2509_ .(var2396_ 8)) var2510_)) .(.(var2504_ .(var2396_ 0)) .(.(var2504_ .(.(var2509_ var2508_) var2506_)) .(var2505_ NIL))))))))));"
+#   1,0,7,3.5177,".(var2571_ .(.(var2538_ .(DIGIT var2540_)) .(.(var2538_ .(DIGIT var2548_)) .(.(var2538_ .(.(var2543_ var2546_) var2544_)) .(.(var2538_ .(var2560_ var2550_)) .(.(var2538_ var2542_) .(var2539_ var2554_))))))) = .(.(var2538_ .(.(var2543_ .(DIGIT var2550_)) var2550_)) .(.(var2538_ .(.(var2543_ .(DIGIT var2550_)) 9)) .(.(var2538_ .(.(var2543_ .(DIGIT var2544_)) var2540_)) .(.(var2538_ .(.(var2543_ .(DIGIT var2548_)) var2548_)) .(.(var2538_ .(.(var2543_ .(DIGIT var2540_)) var2544_)) .(.(var2538_ var2546_) .(.(var2538_ .(.(var2543_ .(DIGIT 8)) var2544_)) .(.(var2538_ .(DIGIT 0)) .(.(var2538_ .(.(var2543_ var2542_) var2540_)) .(var2539_ NIL))))))))));"
+#   1,0,8,3.5177,".(var2636_ .(.(CONS .(DIGIT var2605_)) .(.(CONS .(DIGIT var2613_)) .(.(CONS .(.(var2608_ var2611_) var2609_)) .(.(CONS .(var2625_ var2615_)) .(.(CONS var2607_) .(var2427_ var2619_))))))) = .(.(CONS .(.(var2608_ .(DIGIT var2615_)) var2615_)) .(.(CONS .(.(var2608_ .(DIGIT var2615_)) 9)) .(.(CONS .(.(var2608_ .(DIGIT var2609_)) var2605_)) .(.(CONS .(.(var2608_ .(DIGIT var2613_)) var2613_)) .(.(CONS .(.(var2608_ .(DIGIT var2605_)) var2609_)) .(.(CONS var2611_) .(.(CONS .(.(var2608_ .(DIGIT 8)) var2609_)) .(.(CONS .(DIGIT 0)) .(.(CONS .(.(var2608_ var2607_) var2605_)) .(var2427_ NIL))))))))));"
+#   1,0,9,3.5377,".(var2667_ .(.(CONS .(DIGIT var2406_)) .(.(CONS .(DIGIT var2644_)) .(.(CONS .(.(var2639_ var2642_) var2640_)) .(.(CONS .(var2656_ var2646_)) .(.(CONS var2638_) var2651_)))))) = .(.(CONS .(.(var2639_ .(DIGIT var2646_)) var2646_)) .(.(CONS .(.(var2639_ .(DIGIT var2646_)) 9)) .(.(CONS .(.(var2639_ .(DIGIT var2640_)) var2406_)) .(.(CONS .(.(var2639_ .(DIGIT var2644_)) var2644_)) .(.(CONS .(.(var2639_ .(DIGIT var2406_)) var2640_)) .(.(CONS var2642_) .(.(CONS .(.(var2639_ .(DIGIT 8)) var2640_)) .(.(CONS .(DIGIT 0)) .(.(CONS .(.(var2639_ var2638_) var2406_)) .(.(CONS .(DIGIT 9)) NIL))))))))));"
+#   1,0,10,3.5577,".(C .(.(CONS .(DIGIT 3)) .(.(CONS .(.(DECC .(DIGIT 5)) 2)) var1618_))) = NIL;\n.(C .(.(CONS .(DIGIT 4)) var1292_)) = .(.(CONS .(.(DECC .(DIGIT 1)) 1)) .(.(CONS .(.(DECC .(DIGIT 1)) 9)) .(.(CONS .(.(DECC .(DIGIT 2)) 4)) .(.(CONS .(.(DECC .(DIGIT 3)) 3)) .(.(CONS .(.(DECC .(DIGIT 4)) 2)) .(.(CONS .(DIGIT 5)) .(.(CONS .(.(DECC .(DIGIT 8)) 2)) .(.(CONS .(DIGIT 0)) .(.(CONS .(.(DECC .(DIGIT 6)) 4)) .(.(CONS .(DIGIT 9)) .(C var1292_)))))))))));"
+#   1,1,0,3.2777,".(var2942_ var2941_) = .(.(CONS .(.(DECC .(DIGIT 1)) 1)) .(.(CONS .(.(DECC .(DIGIT 1)) 9)) .(.(CONS .(.(DECC .(DIGIT 2)) 4)) .(.(CONS .(.(DECC .(DIGIT 3)) 3)) .(.(CONS .(.(DECC .(DIGIT 4)) 2)) .(.(CONS .(DIGIT 5)) .(.(CONS .(.(DECC .(DIGIT 8)) 2)) .(.(CONS .(DIGIT 0)) .(.(CONS .(.(DECC .(DIGIT 6)) 4)) .(.(CONS .(DIGIT 9)) NIL))))))))));"
+#   1,1,1,3.2777,".(C var2395_) = .(.(CONS .(.(DECC .(DIGIT 1)) 1)) .(.(CONS .(.(DECC .(DIGIT 1)) 9)) .(.(CONS .(.(DECC .(DIGIT 2)) 4)) .(.(CONS .(.(DECC .(DIGIT 3)) 3)) .(.(CONS .(.(DECC .(DIGIT 4)) 2)) .(.(CONS .(DIGIT 5)) .(.(CONS .(.(DECC .(DIGIT 8)) 2)) .(.(CONS .(DIGIT 0)) .(.(CONS .(.(DECC .(DIGIT 6)) 4)) .(.(CONS .(DIGIT 9)) NIL))))))))));"
+#   1,1,2,3.2977,".(C .(.(CONS var6877_) var2403_)) = .(.(CONS .(.(DECC .(DIGIT 1)) 1)) .(.(CONS .(.(DECC .(DIGIT 1)) 9)) .(.(CONS .(.(DECC .(DIGIT 2)) 4)) .(.(CONS .(.(DECC .(DIGIT 3)) 3)) .(.(CONS .(.(DECC var6877_) 2)) .(.(CONS .(DIGIT 5)) .(.(CONS .(.(DECC .(DIGIT 8)) 2)) .(.(CONS .(DIGIT 0)) .(.(CONS .(.(DECC .(DIGIT 6)) 4)) .(.(CONS .(DIGIT 9)) NIL))))))))));"
+#   1,1,3,3.2977,".(C .(var6876_ var2403_)) = .(.(CONS .(.(DECC .(DIGIT 1)) 1)) .(.(CONS .(.(DECC .(DIGIT 1)) 9)) .(.(CONS .(.(DECC .(DIGIT 2)) 4)) .(.(CONS .(.(DECC .(DIGIT 3)) 3)) .(.(CONS .(.(DECC .(DIGIT 4)) 2)) .(.(CONS .(DIGIT 5)) .(.(CONS .(.(DECC .(DIGIT 8)) 2)) .(.(CONS .(DIGIT 0)) .(.(CONS .(.(DECC .(DIGIT 6)) 4)) .(.(CONS .(DIGIT 9)) NIL))))))))));"
+#   1,1,4,3.2977,".(var7282_ .(var7280_ var2408_)) = .(.(CONS .(.(DECC .(DIGIT 1)) 1)) .(.(CONS .(.(DECC .(DIGIT 1)) 9)) .(.(CONS .(.(DECC .(DIGIT 2)) 4)) .(.(CONS .(.(DECC .(DIGIT 3)) 3)) .(.(CONS .(.(DECC .(DIGIT 4)) 2)) .(.(CONS .(DIGIT 5)) .(.(CONS .(.(DECC .(DIGIT 8)) 2)) .(.(CONS .(DIGIT 0)) .(.(CONS .(.(DECC .(DIGIT 6)) 4)) .(.(CONS .(DIGIT 9)) NIL))))))))));"
+#   1,1,5,3.3177,".(C NIL) = NIL;\n.(C var2395_) = .(.(CONS .(.(DECC .(DIGIT 1)) 1)) .(.(CONS .(.(DECC .(DIGIT 1)) 9)) .(.(CONS .(.(DECC .(DIGIT 2)) 4)) .(.(CONS .(.(DECC .(DIGIT 3)) 3)) .(.(CONS .(.(DECC .(DIGIT 4)) 2)) .(.(CONS .(DIGIT 5)) .(.(CONS .(.(DECC .(DIGIT 8)) 2)) .(.(CONS .(DIGIT 0)) .(.(CONS .(.(DECC .(DIGIT 6)) 4)) .(.(CONS .(DIGIT 9)) NIL))))))))));"
+#   1,1,6,3.3177,".(C .(.(CONS var7259_) var2408_)) = .(.(CONS .(.(DECC .(DIGIT 1)) 1)) .(.(CONS .(.(DECC .(DIGIT 1)) 9)) .(.(CONS .(.(DECC .(DIGIT 2)) 4)) .(.(CONS .(.(DECC .(DIGIT 3)) 3)) .(.(CONS .(.(DECC .(DIGIT 4)) 2)) .(.(CONS .(DIGIT 5)) .(.(CONS .(.(DECC .(DIGIT 8)) 2)) .(.(CONS .(DIGIT 0)) .(.(CONS .(.(DECC .(DIGIT 6)) 4)) .(.(CONS .(DIGIT 9)) NIL))))))))));"
+#   1,1,7,3.3177,".(EQUAL var7538_) = EMPTY;\n.(var2942_ var2941_) = .(.(CONS .(.(DECC .(DIGIT 1)) 1)) .(.(CONS .(.(DECC .(DIGIT 1)) 9)) .(.(CONS .(.(DECC .(DIGIT 2)) 4)) .(.(CONS .(.(DECC .(DIGIT 3)) 3)) .(.(CONS .(.(DECC .(DIGIT 4)) 2)) .(.(CONS .(DIGIT 5)) .(.(CONS .(.(DECC .(DIGIT 8)) 2)) .(.(CONS .(DIGIT 0)) .(.(CONS .(.(DECC .(DIGIT 6)) 4)) .(.(CONS .(DIGIT 9)) NIL))))))))));"
+#   1,1,8,3.3377,".(C .(.(CONS .(DIGIT 4)) var2403_)) = .(.(CONS .(.(DECC .(DIGIT 1)) 1)) .(.(CONS .(.(DECC .(DIGIT 1)) 9)) .(.(CONS .(.(DECC .(DIGIT 2)) 4)) .(.(CONS .(.(DECC .(DIGIT 3)) 3)) .(.(CONS .(.(DECC .(DIGIT 4)) 2)) .(.(CONS .(DIGIT 5)) .(.(CONS .(.(DECC .(DIGIT 8)) 2)) .(.(CONS .(DIGIT 0)) .(.(CONS .(.(DECC .(DIGIT 6)) 4)) .(.(CONS .(DIGIT 9)) NIL))))))))));"
+#   1,1,9,3.3377,".(var6586_ .(var6586_ var6587_)) = var6587_;\n.(var2942_ var2941_) = .(.(CONS .(.(DECC .(DIGIT 1)) 1)) .(.(CONS .(.(DECC .(DIGIT 1)) 9)) .(.(CONS .(.(DECC .(DIGIT 2)) 4)) .(.(CONS .(.(DECC .(DIGIT 3)) 3)) .(.(CONS .(.(DECC .(DIGIT 4)) 2)) .(.(CONS .(DIGIT 5)) .(.(CONS .(.(DECC .(DIGIT 8)) 2)) .(.(CONS .(DIGIT 0)) .(.(CONS .(.(DECC .(DIGIT 6)) 4)) .(.(CONS .(DIGIT 9)) NIL))))))))));"
+#   1,1,10,3.3377,".(C .(.(CONS .(var6874_ 4)) var2403_)) = .(.(CONS .(.(DECC .(var6874_ 1)) 1)) .(.(CONS .(.(DECC .(var6874_ 1)) 9)) .(.(CONS .(.(DECC .(var6874_ 2)) 4)) .(.(CONS .(.(DECC .(var6874_ 3)) 3)) .(.(CONS .(.(DECC .(var6874_ 4)) 2)) .(.(CONS .(var6874_ 5)) .(.(CONS .(.(DECC .(var6874_ 8)) 2)) .(.(CONS .(var6874_ 0)) .(.(CONS .(.(DECC .(var6874_ 6)) 4)) .(.(CONS .(var6874_ 9)) NIL))))))))));"
+
+thread 'main' has overflowed its stack
+fatal runtime error: stack overflow
