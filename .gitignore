@@ -1,4 +1,5 @@
 /target
+out/old_logs
 **/*.rs.bk
 Pipfile.lock
 *csv
