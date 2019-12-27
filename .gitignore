@@ -1,6 +1,5 @@
 /target
 **/*.rs.bk
-*.log
 Pipfile.lock
 *csv
 *png
