@@ -295,13 +295,20 @@ fn evolve<R: Rng>(
         }
         let mem_score = (task.oracle)(&lex.lexicon, &memorized);
         let mem_pair = (memorized, mem_score);
-        let mut seen = vec![];
+        let mut seen = if n_data == 0 {
+            pop.iter().map(|(x, _)| x).cloned().collect_vec()
+        } else {
+            vec![]
+        };
 
         for gen in 0..params.simulation.generations_per_datum {
             if !pop.iter().any(|(x, _)| TRS::is_alpha(&mem_pair.0, x)) {
                 pop.sort_by(|x, y| x.1.partial_cmp(&y.1).expect("found NaN"));
                 pop.pop();
                 pop.push(mem_pair.clone());
+                if !seen.iter().any(|x| TRS::is_alpha(&mem_pair.0, x)) {
+                    seen.push(mem_pair.0.clone());
+                }
                 pop.sort_by(|x, y| x.1.partial_cmp(&y.1).expect("found NaN"));
             }
             if gen == 0 && n_data == 0 {
