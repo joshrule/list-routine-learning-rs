@@ -27,17 +27,16 @@ max_sample_size = 10
 atom_weights = [1.0, 1.0, 1.0, 1.0]
 
 moves = [
-    {weight = 4, mv = { "SampleRule"        = { 0 = [1.0, 1.0, 1.0, 1.0], 1 = 10 }}},
-    {weight = 4, mv = { "RegenerateRule"    = { 0 = [1.0, 1.0, 1.0, 1.0], 1 = 10 }}},
-    {weight = 2, mv = { "Recurse"           =   20 }},
-    {weight = 2, mv = { "RecurseVariablize" =   3  }},
-    {weight = 2, mv = { "RecurseGeneralize" =   20 }},
-    {weight = 1, mv =   "Memorize"    },
-    {weight = 2, mv =   "MemorizeOne" },
+    {weight = 2, mv = { "SampleRule"        = { 0 = [1.0, 1.0, 1.0, 1.0], 1 = 10 }}},
+    {weight = 2, mv = { "RegenerateRule"    = { 0 = [1.0, 1.0, 1.0, 1.0], 1 = 10 }}},
     {weight = 4, mv =   "Variablize"  },
     {weight = 4, mv =   "Generalize"  },
-    {weight = 2, mv =   "Combine"     },
-    {weight = 2, mv =   "DeleteRules" },
+    {weight = 1, mv = { "Recurse"           =   20 }},
+    {weight = 1, mv =   "MemorizeOne" },
+    {weight = 1, mv =   "Combine"     },
+    {weight = 1, mv =   "DeleteRules" },
+    {weight = 1, mv = { "RecurseVariablize" =   3  }},
+    {weight = 1, mv = { "RecurseGeneralize" =   20 }},
     ]
 
 [gp]
@@ -45,25 +44,19 @@ moves = [
 # selection occurs by randomly sampling from the current population + offspring without replacement.
 selection = "deterministic"
 
-# speciation should create 100 new individuals
-species_size = 500
-
 # maintain a population of 10 individuals
 population_size = 10 
 
 # to find a parent, randomly select 3 from the existing population, then choose the best of those.
-tournament_size = 3
-
-# mutate 95% of the time, cross 5% of the time
-weights = { mutation = 20, crossover = 2, abiogenesis = 1 }
+tournament_size = 1
 
 # generate 90 new offspring during each generation
-n_delta = 500
+n_delta = 300
 
 [model]
 
 # the prior is generative: sample the number of rules and then sample each rule up to that number.
-prior = { "SimpleGenerative" = {p_rule = 0.5, atom_weights = [1.0, 1.0, 1.0, 1.0]}}
+prior = { "Size" = 1.0 }
 
 # evaluation strategy is normal-order rather than eager, all possible rewrites, string rewriting, etc.
 strategy = "Normal"
