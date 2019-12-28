@@ -148,11 +148,11 @@ fn initialize_population<R: Rng>(
     let mut rules = Vec::with_capacity(params.gp.population_size);
     while rules.len() < rules.capacity() {
         let mut pop = lex.genesis(&params.genetic, rng, 1, &schema);
-        let trs = pop[0].utrs();
         let unique = !rules
             .iter()
-            .any(|(ptrs, _): &(TRS, _)| UntypedTRS::alphas(&trs, &ptrs.utrs()));
+            .any(|(ptrs, _): &(TRS, _)| UntypedTRS::alphas(&pop[0].utrs(), &ptrs.utrs()));
         if unique {
+            let trs = pop[0].full_utrs();
             let sig = lex.lexicon.signature();
             let mut trace = Trace::new(
                 &trs,
@@ -198,7 +198,7 @@ fn make_prediction(pop: &[(TRS, f64)], input: &Term, params: &Params) -> Term {
         .min_by(|(_, x), (_, y)| x.partial_cmp(y).or_else(|| Some(Ordering::Less)).unwrap())
         .unwrap()
         .0;
-    let utrs = best_trs.utrs();
+    let utrs = best_trs.full_utrs();
     let sig = best_trs.lexicon().signature();
     let mut trace = Trace::new(
         &utrs,
