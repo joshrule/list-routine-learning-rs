@@ -27,16 +27,16 @@ max_sample_size = 10
 atom_weights = [1.0, 1.0, 1.0, 1.0]
 
 moves = [
-    {weight = 2, mv = { "SampleRule"        = { 0 = [1.0, 1.0, 1.0, 1.0], 1 = 10 }}},
-    {weight = 2, mv = { "RegenerateRule"    = { 0 = [1.0, 1.0, 1.0, 1.0], 1 = 10 }}},
     {weight = 4, mv =   "Variablize"  },
     {weight = 4, mv =   "Generalize"  },
-    {weight = 1, mv = { "Recurse"           =   20 }},
+    {weight = 2, mv = { "SampleRule"        = { 0 = [1.0, 1.0, 1.0, 1.0], 1 = 10 }}},
+    {weight = 2, mv = { "RegenerateRule"    = { 0 = [1.0, 1.0, 1.0, 1.0], 1 = 10 }}},
     {weight = 1, mv =   "MemorizeOne" },
-    {weight = 1, mv =   "Combine"     },
-    {weight = 1, mv =   "DeleteRules" },
-    {weight = 1, mv = { "RecurseVariablize" =   3  }},
-    {weight = 1, mv = { "RecurseGeneralize" =   20 }},
+    {weight = 1, mv = { "RecurseVariablize" =     3 }},
+    {weight = 1, mv = { "RecurseGeneralize" =    20 }},
+    {weight = 1, mv = { "Recurse"           =    20 }},
+    {weight = 1, mv = { "Combine"           =   300 }},
+    {weight = 1, mv = { "DeleteRules"       =   300 }},
     ]
 
 [gp]
