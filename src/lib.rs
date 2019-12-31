@@ -139,18 +139,18 @@ impl Value {
             Value::Int(x) => Value::num_to_term(lex, *x)?,
             Value::IntList(xs) => Value::list_to_term(lex, &xs)?,
             Value::Bool(true) => Term::Application {
-                op: lex.has_op(Some("true"), 0)?,
+                op: lex.has_op(Some("true"), 0).map_err(|_| ())?,
                 args: vec![],
             },
             Value::Bool(false) => Term::Application {
-                op: lex.has_op(Some("false"), 0)?,
+                op: lex.has_op(Some("false"), 0).map_err(|_| ())?,
                 args: vec![],
             },
         };
         if let Some(op) = lhs {
             let op_term = Term::Application { op, args: vec![] };
             Ok(Term::Application {
-                op: lex.has_op(Some("."), 2)?,
+                op: lex.has_op(Some("."), 2).map_err(|_| ())?,
                 args: vec![op_term, base_term],
             })
         } else {
@@ -163,9 +163,9 @@ impl Value {
             .map(|&x| Value::num_to_term(lex, x))
             .rev()
             .collect::<Result<Vec<_>, _>>()?;
-        let nil = lex.has_op(Some("NIL"), 0)?;
-        let cons = lex.has_op(Some("CONS"), 0)?;
-        let app = lex.has_op(Some("."), 2)?;
+        let nil = lex.has_op(Some("NIL"), 0).map_err(|_| ())?;
+        let cons = lex.has_op(Some("CONS"), 0).map_err(|_| ())?;
+        let app = lex.has_op(Some("."), 2).map_err(|_| ())?;
         let mut term = Term::Application {
             op: nil,
             args: vec![],
@@ -188,15 +188,15 @@ impl Value {
     }
     fn make_digit(lex: &Lexicon, n: usize) -> Result<Term, ()> {
         let digit_const = Term::Application {
-            op: lex.has_op(Some("DIGIT"), 0)?,
+            op: lex.has_op(Some("DIGIT"), 0).map_err(|_| ())?,
             args: vec![],
         };
         let num_const = Term::Application {
-            op: lex.has_op(Some(&n.to_string()), 0)?,
+            op: lex.has_op(Some(&n.to_string()), 0).map_err(|_| ())?,
             args: vec![],
         };
         Ok(Term::Application {
-            op: lex.has_op(Some("."), 2)?,
+            op: lex.has_op(Some("."), 2).map_err(|_| ())?,
             args: vec![digit_const, num_const],
         })
     }
@@ -204,9 +204,9 @@ impl Value {
         match num {
             0..=9 => Value::make_digit(lex, num),
             _ => {
-                let app = lex.has_op(Some("."), 2)?;
+                let app = lex.has_op(Some("."), 2).map_err(|_| ())?;
                 let decc_term = Term::Application {
-                    op: lex.has_op(Some("DECC"), 0)?,
+                    op: lex.has_op(Some("DECC"), 0).map_err(|_| ())?,
                     args: vec![],
                 };
                 let num_term = Value::num_to_term(lex, num / 10)?;
@@ -215,7 +215,9 @@ impl Value {
                     args: vec![decc_term, num_term],
                 };
                 let digit_term = Term::Application {
-                    op: lex.has_op(Some(&(num % 10).to_string()), 0)?,
+                    op: lex
+                        .has_op(Some(&(num % 10).to_string()), 0)
+                        .map_err(|_| ())?,
                     args: vec![],
                 };
                 Ok(Term::Application {
