@@ -1,7 +1,13 @@
+# for rust
 /target
-out/old_logs
 **/*.rs.bk
+
+# for python
 Pipfile.lock
+
+# for data
+out/old_logs
 *csv
+!out/simulations.csv
 *png
 *jpg
