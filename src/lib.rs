@@ -1,12 +1,12 @@
 use itertools::Itertools;
 use polytype::{ptp, tp, Context as TypeContext, TypeSchema};
 use programinduction::{
-    trs::{parse_lexicon, GeneticParams, Lexicon, ModelParams},
+    trs::{parse_lexicon, parse_rulecontexts, parse_rules, GeneticParams, Lexicon, ModelParams},
     GPParams,
 };
 use serde_derive::{Deserialize, Serialize};
 use std::{fs::read_to_string, path::PathBuf, process::exit};
-use term_rewriting::{Operator, Rule, Term};
+use term_rewriting::{Operator, Rule, RuleContext, Term};
 
 pub fn start_section(s: &str) {
     println!("#\n# {}\n# {}", s, "-".repeat(s.len()));
@@ -42,19 +42,31 @@ pub fn path_to_string(dir: &str, file: &str) -> Result<String, String> {
     str_err(read_to_string(path))
 }
 
-pub fn load_lexicon(problem_dir: &str, deterministic: bool) -> Result<Lexicon, String> {
+pub fn load_lexicon<'a>(problem_dir: &str) -> Result<Lexicon<'a>, String> {
     str_err(parse_lexicon(
         &path_to_string(problem_dir, "signature")?,
-        &path_to_string(problem_dir, "background")?,
-        &path_to_string(problem_dir, "templates")?,
-        deterministic,
         TypeContext::default(),
+    ))
+}
+
+pub fn load_templates(problem_dir: &str, lex: &mut Lexicon) -> Result<Vec<RuleContext>, String> {
+    str_err(parse_rulecontexts(
+        &path_to_string(problem_dir, "templates")?,
+        lex,
+    ))
+}
+
+pub fn load_background(problem_dir: &str, lex: &mut Lexicon) -> Result<Vec<Rule>, String> {
+    str_err(parse_rules(
+        &path_to_string(problem_dir, "background")?,
+        lex,
     ))
 }
 
 #[derive(Deserialize)]
 pub struct Args {
     pub arg_args_file: String,
+    pub arg_problem_dir: String,
 }
 
 #[derive(Deserialize)]
@@ -68,10 +80,7 @@ pub struct Params {
 #[derive(Serialize, Deserialize)]
 pub struct SimulationParams {
     pub generations_per_datum: usize,
-    pub decay: f64,
-    pub problem_dir: String,
-    pub deterministic: bool,
-    pub n_examples: usize,
+    pub n_predictions: usize,
     pub confidence: f64,
 }
 
@@ -134,7 +143,7 @@ pub enum Value {
     Bool(bool),
 }
 impl Value {
-    fn to_term(&self, lex: &Lexicon, lhs: Option<Operator>) -> Result<Term, ()> {
+    pub fn to_term(&self, lex: &Lexicon, lhs: Option<Operator>) -> Result<Term, ()> {
         let base_term = match self {
             Value::Int(x) => Value::num_to_term(lex, *x)?,
             Value::IntList(xs) => Value::list_to_term(lex, &xs)?,
