@@ -7,7 +7,6 @@ Pipfile.lock
 
 # for data
 out/old_logs
-*csv
-!out/simulations.csv
+*log
 *png
 *jpg
