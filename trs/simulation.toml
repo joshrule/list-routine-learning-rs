@@ -3,12 +3,12 @@
 # Make this many predictions.
 n_predictions = 11
 
-# Perform this many generations of evolutionary search for each datum.
-generations_per_datum = 200
+# Search for at most this many seconds for each datum.
+timeout = 120
 
 # Scale generations_per_datum by this factor after each prediction (multiply
 # for good performance, divide for bad performance).
-confidence = 0.666666666666667
+confidence = 0.5
 
 [genetic]
 
@@ -35,7 +35,6 @@ moves = [
     {weight = 2, mv =   "Generalize"                                              },
     {weight = 2, mv = { "Recurse"        = 8 }                                    },
     {weight = 2, mv =   "Compose"                                                 },
-    {weight = 1, mv = { "Combine"        = 8 }                                    },
     {weight = 1, mv = { "DeleteRules"    = 8 }                                    },
     {weight = 1, mv =   "MemorizeOne"                                             },
     {weight = 1, mv = { "SampleRule"     = { 0 = [1.5, 1.5, 1.0, 1.5], 1 = 10 } } },

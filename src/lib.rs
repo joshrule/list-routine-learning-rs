@@ -79,7 +79,7 @@ pub struct Params {
 
 #[derive(Serialize, Deserialize)]
 pub struct SimulationParams {
-    pub generations_per_datum: usize,
+    pub timeout: usize,
     pub n_predictions: usize,
     pub confidence: f64,
 }

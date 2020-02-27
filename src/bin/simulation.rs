@@ -21,6 +21,9 @@ use std::{
 };
 use term_rewriting::{trace::Trace, Operator, Rule, Term, TRS as UntypedTRS};
 
+type Prediction = (usize, usize, String);
+type Predictions = Vec<Prediction>;
+
 fn main() {
     let start = Instant::now();
     let rng = &mut thread_rng();
@@ -68,6 +71,7 @@ fn main() {
 
     notice("evolving", 0);
     let mut predictions = Vec::with_capacity(data.len());
+    let mut search_time = 0.0;
     exit_err(
         evolve(
             &data[..params.simulation.n_predictions],
@@ -75,23 +79,26 @@ fn main() {
             &mut pop,
             &mut gp_lex,
             &mut params,
+            &mut search_time,
             rng,
         ),
         "evolution failed",
     );
-    notice("", 0);
-    println!("i_N,n_seen,accuracy,input,correct,predicted");
-    for (n, (accuracy, n_seen, input, prediction, output)) in predictions.iter().enumerate() {
-        println!(
-            "{},{},{},\"{}\",\"{}\",\"{}\"",
-            n, n_seen, accuracy, input, output, prediction
-        );
-    }
-    notice("", 0);
+    notice(format!("search time: {:.3e}s", search_time), 0);
     notice(
-        format!("total elapsed time: {:.3e}s", start.elapsed().as_secs_f64()),
+        format!("total time: {:.3e}s", start.elapsed().as_secs_f64()),
         0,
     );
+    println!("trial,accuracy,n_seen,program");
+    for (n, (accuracy, n_seen, program)) in predictions.iter().enumerate() {
+        println!(
+            "{},{},{},\"{}\"",
+            n + 1,
+            accuracy,
+            n_seen,
+            program.lines().join(" ")
+        );
+    }
 }
 
 fn load_args() -> Result<(Params, String), String> {
@@ -256,7 +263,7 @@ fn process_prediction(
     pop: &mut Vec<(TRS, f64)>,
     params: &mut Params,
     ceiling: usize,
-    predictions: &mut Vec<(usize, usize, String, String, String)>,
+    predictions: &mut Predictions,
     seen: &[TRS],
 ) {
     let input = &data[n_data].lhs;
@@ -264,60 +271,34 @@ fn process_prediction(
     let (prediction, trs) = make_prediction(pop, input, params);
     let correct = prediction == *output;
     update_confidence(correct, ceiling, params);
-    predictions.push((
-        correct as usize,
-        seen.len(),
-        input.pretty(&trs.lexicon().signature()),
-        prediction.pretty(&trs.lexicon().signature()),
-        output.pretty(&trs.lexicon().signature()),
-    ));
+    predictions.push((correct as usize, seen.len(), trs.to_string()));
 }
 
 fn update_confidence(correct: bool, ceiling: usize, params: &mut Params) {
-    if correct {
-        params.simulation.generations_per_datum = ((params.simulation.generations_per_datum as f64)
-            * params.simulation.confidence)
-            .ceil() as usize;
-        notice(
-            format!(
-                "decreased generations_per_datum to {}",
-                params.simulation.generations_per_datum
-            ),
-            2,
-        );
-    } else {
-        params.simulation.generations_per_datum = ((params.simulation.generations_per_datum as f64)
-            / params.simulation.confidence)
-            .ceil()
-            .min(ceiling as f64) as usize;
-        notice(
-            format!(
-                "increased generations_per_datum to {}",
-                params.simulation.generations_per_datum
-            ),
-            2,
-        );
+    let timeout = params.simulation.timeout;
+    if !correct && timeout == ceiling {
+        notice(format!("timeout remains at ceiling of {}s", timeout), 2);
+        return;
     }
+    let change = if correct { "de" } else { "in" };
+    let c = params.simulation.confidence;
+    let factor = if correct { c } else { c.recip() };
+    let new_timeout = ((timeout as f64) * factor).ceil().min(ceiling as f64) as usize;
+    params.simulation.timeout = new_timeout;
+    notice(format!("timeout {}creased to {}s", change, new_timeout), 2);
 }
 
 fn evolve<'a, 'b, R: Rng>(
     data: &[Rule],
-    predictions: &mut Vec<(usize, usize, String, String, String)>,
+    predictions: &mut Predictions,
     pop: &mut Vec<(TRS<'a, 'b>, f64)>,
     lex: &mut GPLexicon<'a, 'b>,
     params: &mut Params,
+    search_time: &mut f64,
     rng: &mut R,
 ) -> Result<(), String> {
-    let ceiling = params.simulation.generations_per_datum;
-    notice("n_data,generation,rank,nlposterior,trs", 1);
-    let max_op = lex
-        .lexicon
-        .signature()
-        .operators()
-        .iter()
-        .map(|o| o.id())
-        .max()
-        .unwrap();
+    let ceiling = params.simulation.timeout;
+    notice("trial,generation,rank,nlposterior,trs", 1);
     let mut t = 1.0;
     'data: for n_data in 0..data.len() {
         let examples = data[..n_data].to_vec();
@@ -340,7 +321,9 @@ fn evolve<'a, 'b, R: Rng>(
             vec![]
         };
 
-        for gen in 0..params.simulation.generations_per_datum {
+        let now = Instant::now();
+        let mut gen = 0;
+        while now.elapsed().as_secs() <= (params.simulation.timeout as u64) {
             if !pop.iter().any(|(x, _)| TRS::is_alpha(&mem_pair.0, x)) {
                 pop.sort_by(|x, y| x.1.partial_cmp(&y.1).expect("found NaN"));
                 // Only use memorized hypothesis when it contains rules.
@@ -356,31 +339,40 @@ fn evolve<'a, 'b, R: Rng>(
             if gen == 0 && n_data == 0 {
                 for (i, (h, lpost)) in pop.iter().enumerate() {
                     notice_flat(
-                        format!("{},{},{},{:.4},{:?}", n_data, gen, i, lpost, h.to_string()),
+                        format!(
+                            "{},{},{},{:.4},{:?}",
+                            n_data + 1,
+                            gen,
+                            i,
+                            lpost,
+                            h.to_string()
+                        ),
                         1,
                     );
                 }
                 process_prediction(data, n_data, pop, params, ceiling, predictions, &seen);
                 continue 'data;
             }
-            let mut used_symbols = pop
-                .iter()
-                .flat_map(|p| p.0.utrs().operators())
-                .map(|o| o.id())
-                .collect_vec();
-            used_symbols.push(max_op);
-            lex.lexicon.contract(&used_symbols);
             lex.clear();
             let g_full = GeneticParamsFull::new(&params.genetic, params.model);
             lex.evolve(&g_full, rng, &params.gp, &task, &mut seen, pop);
             for (i, (h, lpost)) in pop.iter().enumerate() {
                 notice_flat(
-                    format!("{},{},{},{:.4},{:?}", n_data, gen, i, lpost, h.to_string()),
+                    format!(
+                        "{},{},{},{:.4},{:?}",
+                        n_data + 1,
+                        gen,
+                        i,
+                        lpost,
+                        h.to_string()
+                    ),
                     1,
                 );
             }
             t += 1.0;
+            gen += 1;
         }
+        *search_time += now.elapsed().as_secs_f64();
         if !pop.iter().any(|(x, _)| TRS::is_alpha(&mem_pair.0, x)) {
             pop.sort_by(|x, y| x.1.partial_cmp(&y.1).expect("found NaN"));
             pop.pop();

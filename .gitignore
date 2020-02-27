@@ -5,6 +5,10 @@
 # for python
 Pipfile.lock
 
+# for R
+**/readme_cache
+**/readme.html
+
 # for data
 out/old_logs
 *log
