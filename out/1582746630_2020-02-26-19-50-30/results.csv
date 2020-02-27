@@ -3464,61 +3464,6 @@ waves.2.c041,4,7,1,0,"C (CONS (DIGIT 1) (CONS (DIGIT 3) (CONS (DIGIT 8) [])))","
 waves.2.c041,4,8,1,0,"C (CONS (DIGIT 6) [])","CONS (DIGIT 3) []","[]"
 waves.2.c041,4,9,1,0,"C (CONS (DIGIT 4) (CONS (DIGIT 1) (CONS (DIGIT 3) (CONS (DIGIT 6) []))))","CONS (DIGIT 3) []","CONS (DIGIT 6) (CONS (DIGIT 4) [])"
 waves.2.c041,4,10,1,0,"C (CONS (DIGIT 0) (CONS (DIGIT 4) (CONS (DIGIT 7) (CONS (DIGIT 2) (CONS (DIGIT 7) (CONS (DIGIT 5) (CONS (DIGIT 8) (CONS (DIGIT 5) (CONS (DIGIT 1) [])))))))))","CONS (DIGIT 4) (CONS (DIGIT 4) (CONS (DIGIT 5) []))","[]"
-waves.2.c042,0,#   NAN/0: nat
-waves.2.c042,0,#   ./2: ∀t1. ∀t2. (t1 → t2) → t1 → t2
-waves.2.c042,0,#   EMPTY/0: list → bool
-waves.2.c042,0,#   EQUAL/0: ∀t0. t0 → t0 → bool
-waves.2.c042,0,#   HEAD/0: list → nat
-waves.2.c042,0,#   IF/0: ∀t0. bool → t0 → t0 → t0
-waves.2.c042,0,#   TAIL/0: list → list
-waves.2.c042,0,#   +/0: nat → nat → nat
-waves.2.c042,0,#   -/0: nat → nat → nat
-waves.2.c042,0,#   >/0: nat → nat → bool
-waves.2.c042,0,# loaded templates
-waves.2.c042,1,#   NAN/0: nat
-waves.2.c042,1,#   ./2: ∀t1. ∀t2. (t1 → t2) → t1 → t2
-waves.2.c042,1,#   EMPTY/0: list → bool
-waves.2.c042,1,#   EQUAL/0: ∀t0. t0 → t0 → bool
-waves.2.c042,1,#   HEAD/0: list → nat
-waves.2.c042,1,#   IF/0: ∀t0. bool → t0 → t0 → t0
-waves.2.c042,1,#   TAIL/0: list → list
-waves.2.c042,1,#   +/0: nat → nat → nat
-waves.2.c042,1,#   -/0: nat → nat → nat
-waves.2.c042,1,#   >/0: nat → nat → bool
-waves.2.c042,1,# loaded templates
-waves.2.c042,2,#   NAN/0: nat
-waves.2.c042,2,#   ./2: ∀t1. ∀t2. (t1 → t2) → t1 → t2
-waves.2.c042,2,#   EMPTY/0: list → bool
-waves.2.c042,2,#   EQUAL/0: ∀t0. t0 → t0 → bool
-waves.2.c042,2,#   HEAD/0: list → nat
-waves.2.c042,2,#   IF/0: ∀t0. bool → t0 → t0 → t0
-waves.2.c042,2,#   TAIL/0: list → list
-waves.2.c042,2,#   +/0: nat → nat → nat
-waves.2.c042,2,#   -/0: nat → nat → nat
-waves.2.c042,2,#   >/0: nat → nat → bool
-waves.2.c042,2,# loaded templates
-waves.2.c042,3,#   NAN/0: nat
-waves.2.c042,3,#   ./2: ∀t1. ∀t2. (t1 → t2) → t1 → t2
-waves.2.c042,3,#   EMPTY/0: list → bool
-waves.2.c042,3,#   EQUAL/0: ∀t0. t0 → t0 → bool
-waves.2.c042,3,#   HEAD/0: list → nat
-waves.2.c042,3,#   IF/0: ∀t0. bool → t0 → t0 → t0
-waves.2.c042,3,#   TAIL/0: list → list
-waves.2.c042,3,#   +/0: nat → nat → nat
-waves.2.c042,3,#   -/0: nat → nat → nat
-waves.2.c042,3,#   >/0: nat → nat → bool
-waves.2.c042,3,# loaded templates
-waves.2.c042,4,#   NAN/0: nat
-waves.2.c042,4,#   ./2: ∀t1. ∀t2. (t1 → t2) → t1 → t2
-waves.2.c042,4,#   EMPTY/0: list → bool
-waves.2.c042,4,#   EQUAL/0: ∀t0. t0 → t0 → bool
-waves.2.c042,4,#   HEAD/0: list → nat
-waves.2.c042,4,#   IF/0: ∀t0. bool → t0 → t0 → t0
-waves.2.c042,4,#   TAIL/0: list → list
-waves.2.c042,4,#   +/0: nat → nat → nat
-waves.2.c042,4,#   -/0: nat → nat → nat
-waves.2.c042,4,#   >/0: nat → nat → bool
-waves.2.c042,4,# loaded templates
 waves.2.c043,0,0,17,0,"C (CONS (DIGIT 2) (CONS (DIGIT 4) (CONS (DIGIT 7) (CONS (DIGIT 9) (CONS (DIGIT 2) (CONS (DIGIT 5) (CONS (DIGIT 4) (CONS (DIGIT 9) (CONS (DIGIT 3) [])))))))))","CONS (DIGIT 9) []","CONS (DIGIT 4) (CONS (DIGIT 7) (CONS (DIGIT 9) (CONS (DIGIT 2) (CONS (DIGIT 5) (CONS (DIGIT 4) (CONS (DIGIT 9) (CONS (DIGIT 3) [])))))))"
 waves.2.c043,0,1,1,0,"C (CONS (DIGIT 1) (CONS (DIGIT 8) (CONS (DIGIT 0) (CONS (DIGIT 8) []))))","CONS (DIGIT 8) []","CONS (DIGIT 9) []"
 waves.2.c043,0,2,1,1,"C (CONS (DIGIT 4) (CONS (DIGIT 2) (CONS (DIGIT 1) (CONS (DIGIT 9) (CONS (DIGIT 3) (CONS (DIGIT 8) (CONS (DIGIT 3) (CONS (DIGIT 7) (CONS (DIGIT 5) (CONS (DIGIT 7) []))))))))))","CONS (DIGIT 9) []","CONS (DIGIT 9) []"
