@@ -264,14 +264,14 @@ fn process_prediction(
     params: &mut Params,
     ceiling: usize,
     predictions: &mut Predictions,
-    seen: &[TRS],
+    n_seen: usize,
 ) {
     let input = &data[n_data].lhs;
     let output = &data[n_data].rhs[0];
     let (prediction, trs) = make_prediction(pop, input, params);
     let correct = prediction == *output;
     update_confidence(correct, ceiling, params);
-    predictions.push((correct as usize, seen.len(), trs.to_string()));
+    predictions.push((correct as usize, n_seen, trs.to_string()));
 }
 
 fn update_confidence(correct: bool, ceiling: usize, params: &mut Params) {
@@ -323,6 +323,7 @@ fn evolve<'a, 'b, R: Rng>(
 
         let now = Instant::now();
         let mut gen = 0;
+        let mut n_seen = 0;
         while now.elapsed().as_secs() <= (params.simulation.timeout as u64) {
             if !pop.iter().any(|(x, _)| TRS::is_alpha(&mem_pair.0, x)) {
                 pop.sort_by(|x, y| x.1.partial_cmp(&y.1).expect("found NaN"));
@@ -350,7 +351,8 @@ fn evolve<'a, 'b, R: Rng>(
                         1,
                     );
                 }
-                process_prediction(data, n_data, pop, params, ceiling, predictions, &seen);
+                n_seen = params.gp.population_size;
+                process_prediction(data, n_data, pop, params, ceiling, predictions, n_seen);
                 continue 'data;
             }
             lex.clear();
@@ -371,6 +373,7 @@ fn evolve<'a, 'b, R: Rng>(
             }
             t += 1.0;
             gen += 1;
+            n_seen += params.gp.n_delta;
         }
         *search_time += now.elapsed().as_secs_f64();
         if !pop.iter().any(|(x, _)| TRS::is_alpha(&mem_pair.0, x)) {
@@ -379,7 +382,7 @@ fn evolve<'a, 'b, R: Rng>(
             pop.push(mem_pair.clone());
             pop.sort_by(|x, y| x.1.partial_cmp(&y.1).expect("found NaN"));
         }
-        process_prediction(data, n_data, pop, params, ceiling, predictions, &seen);
+        process_prediction(data, n_data, pop, params, ceiling, predictions, n_seen);
     }
     Ok(())
 }
