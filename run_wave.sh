@@ -20,7 +20,7 @@ cp $1 $OUTDIR/parameters.toml
 cp $2 $OUTDIR/problems.txt
 
 # Update a generic readme.
-echo "- [\`$DIRNAME\`]($DIRNAME/readme.md): $5" >> out/readme.md
+echo "- [\`$DIRNAME\`]($DIRNAME/readme.Rmd): $5" >> out/readme.md
 
 # Update a simulation csv.
 [ ! -e out/simulations.csv ] && echo "directory,parameter_file,problem_file,num_runs,num_jobs,reason" >> out/simulations.csv
