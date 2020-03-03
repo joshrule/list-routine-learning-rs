@@ -4,15 +4,21 @@
 cd $1
 
 OUTFILE="results.csv"
+INFILE="job.txt"
 
-echo "problem,run,trial,n_seen,accuracy,input,correct,predicted" > $OUTFILE
-for FILE in `ls -1 *log`
+echo "problem,run,trial,accuracy,n_seen,program" > $OUTFILE
+while read -r seq host starttime jobruntime send receive exitval signal command
 do
-    BASENAME=${FILE:4: -4};
+    FILE=${command##*/}
+    BASENAME=${FILE%.log}
     PROBLEM=${BASENAME:0: -2}
     RUN=${BASENAME: -1}
-    echo "$BASENAME = $PROBLEM ($RUN)"
-    tail -n 13 $FILE | head -n 11 | sed "s/^/$PROBLEM,$RUN,/" >> $OUTFILE
-done
+    if [ $exitval -eq 0 ]
+    then 
+        tail -n 11 $FILE | sed "s/^/$PROBLEM,$RUN,/" >> $OUTFILE
+    else
+        echo "exited with $exitval, so SKIPPING $PROBLEM ($RUN)"
+    fi
+done < <(tail -n +2 $INFILE)
 
 cd -

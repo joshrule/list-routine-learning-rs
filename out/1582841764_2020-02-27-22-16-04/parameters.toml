@@ -4,7 +4,7 @@
 n_predictions = 11
 
 # Search for at most this many seconds for each datum.
-timeout = 600
+timeout = 120
 
 # Scale generations_per_datum by this factor after each prediction (multiply
 # for good performance, divide for bad performance).
