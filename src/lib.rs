@@ -1,8 +1,8 @@
 use itertools::Itertools;
 use polytype::{ptp, tp, Context as TypeContext, TypeSchema};
-use programinduction::{
-    trs::{parse_lexicon, parse_rulecontexts, parse_rules, GeneticParams, Lexicon, ModelParams},
-    GPParams,
+use programinduction::trs::{
+    mcts::Move, parse_lexicon, parse_rulecontexts, parse_rules, parse_trs, Lexicon, ModelParams,
+    TRS,
 };
 use serde_derive::{Deserialize, Serialize};
 use std::{fs::read_to_string, path::PathBuf, process::exit};
@@ -49,17 +49,31 @@ pub fn load_lexicon<'a>(problem_dir: &str) -> Result<Lexicon<'a>, String> {
     ))
 }
 
-pub fn load_templates(problem_dir: &str, lex: &mut Lexicon) -> Result<Vec<RuleContext>, String> {
+pub fn load_rulecontexts(problem_dir: &str, lex: &mut Lexicon) -> Result<Vec<RuleContext>, String> {
     str_err(parse_rulecontexts(
         &path_to_string(problem_dir, "templates")?,
         lex,
     ))
 }
 
-pub fn load_background(problem_dir: &str, lex: &mut Lexicon) -> Result<Vec<Rule>, String> {
+pub fn load_rules(problem_dir: &str, lex: &mut Lexicon) -> Result<Vec<Rule>, String> {
     str_err(parse_rules(
         &path_to_string(problem_dir, "background")?,
         lex,
+    ))
+}
+
+pub fn load_trs<'a, 'b>(
+    problem_dir: &str,
+    lex: &mut Lexicon<'b>,
+    deterministic: bool,
+    bg: &'a [Rule],
+) -> Result<TRS<'a, 'b>, String> {
+    str_err(parse_trs(
+        &path_to_string(problem_dir, "evaluate")?,
+        lex,
+        deterministic,
+        bg,
     ))
 }
 
@@ -72,8 +86,7 @@ pub struct Args {
 #[derive(Deserialize)]
 pub struct Params {
     pub simulation: SimulationParams,
-    pub genetic: GeneticParams,
-    pub gp: GPParams,
+    pub mcts: MCTSParams,
     pub model: ModelParams,
 }
 
@@ -82,6 +95,13 @@ pub struct SimulationParams {
     pub timeout: usize,
     pub n_predictions: usize,
     pub confidence: f64,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct MCTSParams {
+    pub max_depth: usize,
+    pub max_states: usize,
+    pub moves: Vec<Move>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

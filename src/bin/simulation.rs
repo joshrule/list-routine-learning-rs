@@ -6,20 +6,24 @@
 //! "Wikipedia - Hindley-Milner Type System"
 //! [3]: https://en.wikipedia.org/wiki/Rewriting#Term_rewriting_systems
 //! "Wikipedia - Term Rewriting Systems"
+// TODO: Run *either* GP or MCTS.
+// TODO: update data should invalidate anything with infinitely bad likelihood...
 
 use docopt::Docopt;
 use itertools::Itertools;
 use list_routine_learning_rs::*;
 use programinduction::{
-    trs::{task_by_rewrite, GPLexicon, GeneticParamsFull, Lexicon, TRS},
-    GP,
+    trs::{
+        mcts::{MCTSMoveEvaluator, MCTSState, MCTSStateEvaluator, TRSMCTS},
+        Hypothesis, Lexicon, TRS,
+    },
+    MCTSManager,
 };
 use rand::{seq::SliceRandom, thread_rng, Rng};
 use std::{
-    cmp::Ordering, collections::HashMap, f64, fs::File, io::BufReader, path::PathBuf,
-    process::exit, str, time::Instant,
+    cmp::Ordering, f64, fs::File, io::BufReader, path::PathBuf, process::exit, str, time::Instant,
 };
-use term_rewriting::{trace::Trace, Operator, Rule, Term, TRS as UntypedTRS};
+use term_rewriting::{trace::Trace, Operator, Rule, Term};
 
 type Prediction = (usize, usize, String);
 type Predictions = Vec<Prediction>;
@@ -28,21 +32,14 @@ fn main() {
     let start = Instant::now();
     let rng = &mut thread_rng();
     let (mut params, problem_dir) = exit_err(load_args(), "Failed to load parameters");
-    params.gp.population_size += 1; // +1 for memorized hypothesis
     notice("loaded parameters", 0);
 
     let mut lex = exit_err(load_lexicon(&problem_dir), "Failed to load lexicon");
     notice("loaded lexicon", 0);
     notice(&lex, 1);
 
-    let templates = exit_err(
-        load_templates(&problem_dir, &mut lex),
-        "Failed to load templates",
-    );
-    notice("loaded templates", 0);
-
     let background = exit_err(
-        load_background(&problem_dir, &mut lex),
+        load_rules(&problem_dir, &mut lex),
         "Failed to load background",
     );
     notice("loaded background", 0);
@@ -59,36 +56,32 @@ fn main() {
             exit(1);
         });
     notice("loaded data", 0);
-    notice(examples.iter().map(|e| format!("{:?}", e)).join("\n"), 1);
-
-    let mut gp_lex = GPLexicon::new(&lex, &background, templates);
-    notice("created GPLexicon", 0);
-    let mut pop = exit_err(
-        initialize_population(&gp_lex, &params, rng, &data[0].lhs),
-        "couldn't initialize population",
+    notice(
+        examples
+            .iter()
+            .take(params.simulation.n_predictions)
+            .map(|e| format!("{:?}", e))
+            .join("\n"),
+        1,
     );
-    notice("initialized population", 0);
 
-    notice("evolving", 0);
+    notice("searching", 0);
     let mut predictions = Vec::with_capacity(data.len());
-    let mut search_time = 0.0;
-    exit_err(
-        evolve(
+    let search_time = exit_err(
+        search(
+            lex,
+            &background,
             &data[..params.simulation.n_predictions],
             &mut predictions,
-            &mut pop,
-            &mut gp_lex,
             &mut params,
-            &mut search_time,
             rng,
         ),
-        "evolution failed",
+        "search failed",
     );
+
     notice(format!("search time: {:.3e}s", search_time), 0);
-    notice(
-        format!("total time: {:.3e}s", start.elapsed().as_secs_f64()),
-        0,
-    );
+    let elapsed = start.elapsed().as_secs_f64();
+    notice(format!("total time: {:.3e}s", elapsed), 0);
     println!("trial,accuracy,n_seen,program");
     for (n, (accuracy, n_seen, program)) in predictions.iter().enumerate() {
         println!(
@@ -124,114 +117,45 @@ fn identify_concept(lex: &Lexicon) -> Result<Operator, String> {
     )
 }
 
-//fn load_h_star<'a, 'b>(
-//    problem_dir: &str,
-//    lex: &mut Lexicon<'b>,
-//    deterministic: bool,
-//    bg: &'a [Rule],
-//) -> Result<TRS<'a, 'b>, String> {
-//    str_err(parse_trs(
-//        &path_to_string(problem_dir, "evaluate")?,
-//        lex,
-//        deterministic,
-//        bg,
-//    ))
-//}
-
 pub fn logsumexp(lps: &[f64]) -> f64 {
     let largest = lps.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
     let x = lps.iter().map(|lp| (lp - largest).exp()).sum::<f64>().ln();
     largest + x
 }
 
-fn initialize_population<'a, 'b, R: Rng>(
-    lex: &GPLexicon<'a, 'b>,
+#[allow(clippy::too_many_arguments)]
+fn process_prediction(
+    data: &[Rule],
+    seen: &[Hypothesis],
     params: &Params,
-    rng: &mut R,
-    input: &Term,
-) -> Result<Vec<(TRS<'a, 'b>, f64)>, String> {
-    let schema = lex
-        .lexicon
-        .infer_term(input, &mut HashMap::new())
-        .drop()
-        .unwrap();
-    // notice("inferred", 1);
-    let mut rules = Vec::with_capacity(params.gp.population_size);
-    // notice("entering sampling loop", 1);
-    let mut count = 0;
-    while rules.len() < rules.capacity() {
-        count += 1;
-        // notice("another round", 2);
-        let g_full = GeneticParamsFull::new(&params.genetic, params.model);
-        let mut pop = lex.genesis(&g_full, rng, 1, &schema);
-        // notice("genesis", 3);
-        let unique = !rules
-            .iter()
-            .any(|(ptrs, _): &(TRS, _)| UntypedTRS::alphas(&pop[0].utrs(), &ptrs.utrs()));
-        if unique {
-            let trs = pop[0].full_utrs();
-            let sig = lex.lexicon.signature();
-            let mut trace = Trace::new(
-                &trs,
-                &sig,
-                &input,
-                params.model.likelihood.p_observe,
-                params.model.likelihood.max_size,
-                params.model.likelihood.max_depth,
-                params.model.likelihood.strategy,
-            );
-            trace.rewrite(params.model.likelihood.max_steps);
-            let masss = trace
-                .root()
-                .iter()
-                .map(|x| {
-                    let sig = lex.lexicon.signature().deep_copy();
-                    if UntypedTRS::convert_list_to_string(&x.term(), &sig).is_some() {
-                        x.log_p()
-                    } else {
-                        f64::NEG_INFINITY
-                    }
-                })
-                .collect_vec();
-            let mass = logsumexp(&masss);
-            // notice("mass computed", 3);
-            if mass.is_finite() {
-                let trs = pop.pop().unwrap();
-                let prior = trs.log_prior(params.model.prior);
-                rules.push((trs, -prior));
-                // notice("pushed", 3);
-            }
-        }
-    }
-    // notice("sorting", 1);
-    notice(
-        format!(
-            "initial population of {} required {} samples",
-            rules.len(),
-            count,
-        ),
-        1,
-    );
-    rules.sort_by(|x, y| {
-        x.1.partial_cmp(&y.1)
-            .or(Some(std::cmp::Ordering::Equal))
-            .unwrap()
-    });
-    Ok(rules)
+    predictions: &mut Predictions,
+) -> bool {
+    let n_data = data.len() - 1;
+    let n_seen = seen.len();
+    let input = &data[n_data].lhs;
+    let output = &data[n_data].rhs[0];
+    let trs = best_so_far(seen);
+    let prediction = make_prediction(trs, input, params);
+    let correct = prediction == *output;
+    predictions.push((correct as usize, n_seen, trs.to_string()));
+    correct
 }
 
-fn make_prediction<'a, 'b, 'c>(
-    pop: &'c [(TRS<'a, 'b>, f64)],
-    input: &Term,
-    params: &Params,
-) -> (Term, &'c TRS<'a, 'b>) {
-    let best_trs = &pop
-        .iter()
-        .min_by(|(_, x), (_, y)| x.partial_cmp(y).or_else(|| Some(Ordering::Less)).unwrap())
+fn best_so_far<'a, 'b, 'c>(pop: &'c [Hypothesis<'a, 'b>]) -> &'c TRS<'a, 'b> {
+    &pop.iter()
+        .max_by(|x, y| {
+            x.lposterior
+                .partial_cmp(&y.lposterior)
+                .or_else(|| Some(Ordering::Less))
+                .unwrap()
+        })
         .unwrap()
-        .0;
-    let utrs = best_trs.full_utrs();
-    let sig = best_trs.lexicon().signature();
+        .trs
+}
+
+fn make_prediction<'a, 'b>(trs: &TRS<'a, 'b>, input: &Term, params: &Params) -> Term {
+    let utrs = trs.full_utrs();
+    let sig = trs.lexicon().signature();
     let mut trace = Trace::new(
         &utrs,
         &sig,
@@ -242,7 +166,7 @@ fn make_prediction<'a, 'b, 'c>(
         params.model.likelihood.strategy,
     );
     trace.rewrite(params.model.likelihood.max_steps);
-    let term = trace
+    trace
         .root()
         .iter()
         .max_by(|n1, n2| {
@@ -252,137 +176,107 @@ fn make_prediction<'a, 'b, 'c>(
                 .unwrap()
         })
         .unwrap()
-        .term();
-    (term, best_trs)
+        .term()
 }
 
-#[allow(clippy::too_many_arguments)]
-fn process_prediction(
-    data: &[Rule],
-    n_data: usize,
-    pop: &mut Vec<(TRS, f64)>,
-    params: &mut Params,
-    ceiling: usize,
-    predictions: &mut Predictions,
-    n_seen: usize,
-) {
-    let input = &data[n_data].lhs;
-    let output = &data[n_data].rhs[0];
-    let (prediction, trs) = make_prediction(pop, input, params);
-    let correct = prediction == *output;
-    update_confidence(correct, ceiling, params);
-    predictions.push((correct as usize, n_seen, trs.to_string()));
-}
-
-fn update_confidence(correct: bool, ceiling: usize, params: &mut Params) {
-    let timeout = params.simulation.timeout;
-    if !correct && timeout == ceiling {
+fn update_timeout(correct: bool, timeout: &mut usize, ceiling: usize, scale: f64) {
+    if !correct && *timeout == ceiling {
         notice(format!("timeout remains at ceiling of {}s", timeout), 2);
         return;
     }
     let change = if correct { "de" } else { "in" };
-    let c = params.simulation.confidence;
-    let factor = if correct { c } else { c.recip() };
-    let new_timeout = ((timeout as f64) * factor).ceil().min(ceiling as f64) as usize;
-    params.simulation.timeout = new_timeout;
-    notice(format!("timeout {}creased to {}s", change, new_timeout), 2);
+    let factor = if correct { scale } else { scale.recip() };
+    *timeout = ((*timeout as f64) * factor).ceil().min(ceiling as f64) as usize;
+    notice(format!("timeout {}creased to {}s", change, timeout), 2);
 }
 
-fn evolve<'a, 'b, R: Rng>(
+fn search<'a, 'b, R: Rng>(
+    lex: Lexicon<'b>,
+    background: &[Rule],
     data: &[Rule],
     predictions: &mut Predictions,
-    pop: &mut Vec<(TRS<'a, 'b>, f64)>,
-    lex: &mut GPLexicon<'a, 'b>,
     params: &mut Params,
-    search_time: &mut f64,
     rng: &mut R,
-) -> Result<(), String> {
-    let ceiling = params.simulation.timeout;
-    notice("trial,generation,rank,nlposterior,trs", 1);
-    let mut t = 1.0;
-    'data: for n_data in 0..data.len() {
-        let examples = data[..n_data].to_vec();
-        let memorized = TRS::new_unchecked(
-            &lex.lexicon,
-            params.genetic.deterministic,
-            &lex.bg,
-            examples.clone(),
+) -> Result<f64, String> {
+    let mut manager = make_manager(lex, background, &[], params);
+    let mut timeout = params.simulation.timeout;
+    let mut search_time = 0.0;
+    let mut n_seen = 0;
+    notice("trial,nlposterior,trs", 1);
+    for n_data in 0..data.len() {
+        notice(format!("n_data: {}", n_data), 0);
+        notice("updating data", 0);
+        update_data(&mut manager, &data[..n_data]);
+        manager.tree().show();
+        // TODO: Do we want to do something different on the first trial?
+        // manager.step_until(rng, |_| now.elapsed().as_secs_f64() > (timeout as f64));
+        for _ in 0..10 {
+            let now = Instant::now();
+            manager.step(rng);
+            search_time += now.elapsed().as_secs_f64();
+            for h in manager.tree().mcts().trss.iter().skip(n_seen) {
+                let h_str = h.trs.to_string();
+                let lpost = h.lposterior;
+                notice_flat(format!("{},{:.4},{:?}", n_data + 1, lpost, h_str), 1);
+                n_seen += 1;
+            }
+        }
+        println!("search_time: {:.4}", search_time);
+        println!("searched: {}", manager.tree().mcts().trss.len());
+        // Make a prediction.
+        notice("making prediction", 0);
+        let correct = process_prediction(
+            &data[..n_data + 1],
+            &manager.tree().mcts().trss,
+            params,
+            predictions,
         );
-        let task = task_by_rewrite(&examples, params.model, &lex.lexicon, t, examples.to_vec())
-            .map_err(|_| "bad task".to_string())?;
-        for i in pop.iter_mut() {
-            i.1 = (task.oracle)(&lex.lexicon, &i.0);
-        }
-        let mem_score = (task.oracle)(&lex.lexicon, &memorized);
-        let mem_pair = (memorized, mem_score);
-        let mut seen = if n_data == 0 {
-            pop.iter().map(|(x, _)| x).cloned().collect_vec()
-        } else {
-            vec![]
-        };
-
-        let now = Instant::now();
-        let mut gen = 0;
-        let mut n_seen = 0;
-        while now.elapsed().as_secs() <= (params.simulation.timeout as u64) {
-            if !pop.iter().any(|(x, _)| TRS::is_alpha(&mem_pair.0, x)) {
-                pop.sort_by(|x, y| x.1.partial_cmp(&y.1).expect("found NaN"));
-                // Only use memorized hypothesis when it contains rules.
-                if n_data > 0 {
-                    pop.pop();
-                    pop.push(mem_pair.clone());
-                    if !seen.iter().any(|x| TRS::is_alpha(&mem_pair.0, x)) {
-                        seen.push(mem_pair.0.clone());
-                    }
-                    pop.sort_by(|x, y| x.1.partial_cmp(&y.1).expect("found NaN"));
-                }
-            }
-            if gen == 0 && n_data == 0 {
-                for (i, (h, lpost)) in pop.iter().enumerate() {
-                    notice_flat(
-                        format!(
-                            "{},{},{},{:.4},{:?}",
-                            n_data + 1,
-                            gen,
-                            i,
-                            lpost,
-                            h.to_string()
-                        ),
-                        1,
-                    );
-                }
-                n_seen = params.gp.population_size;
-                process_prediction(data, n_data, pop, params, ceiling, predictions, n_seen);
-                continue 'data;
-            }
-            lex.clear();
-            let g_full = GeneticParamsFull::new(&params.genetic, params.model);
-            lex.evolve(&g_full, rng, &params.gp, &task, &mut seen, pop);
-            for (i, (h, lpost)) in pop.iter().enumerate() {
-                notice_flat(
-                    format!(
-                        "{},{},{},{:.4},{:?}",
-                        n_data + 1,
-                        gen,
-                        i,
-                        lpost,
-                        h.to_string()
-                    ),
-                    1,
-                );
-            }
-            t += 1.0;
-            gen += 1;
-            n_seen += params.gp.n_delta;
-        }
-        *search_time += now.elapsed().as_secs_f64();
-        if !pop.iter().any(|(x, _)| TRS::is_alpha(&mem_pair.0, x)) {
-            pop.sort_by(|x, y| x.1.partial_cmp(&y.1).expect("found NaN"));
-            pop.pop();
-            pop.push(mem_pair.clone());
-            pop.sort_by(|x, y| x.1.partial_cmp(&y.1).expect("found NaN"));
-        }
-        process_prediction(data, n_data, pop, params, ceiling, predictions, n_seen);
+        update_timeout(
+            correct,
+            &mut timeout,
+            params.simulation.timeout,
+            params.simulation.confidence,
+        );
     }
-    Ok(())
+    Ok(search_time)
+}
+
+fn update_data<'a, 'b>(manager: &mut MCTSManager<TRSMCTS<'a, 'b>>, data: &'a [Rule]) {
+    // 0. Add the new data to the MCTS object.
+    manager.tree_mut().mcts_mut().obs = data;
+
+    // 1. For each object in the object list, call change_data on the hypothesis.
+    for h in manager.tree_mut().mcts_mut().trss.iter_mut() {
+        h.change_data(data);
+    }
+    notice("rescored objects", 1);
+    // 2. Copy the evaluation information to nodes from objects.
+    // 3. Iteratively update the Q values (the root Q is the sum over the child Qs).
+    // 4. Copy the node Q to the moves while iterating over the list of moves.
+    manager.tree_mut().reevaluate_states();
+    notice("reevaluated states", 1);
+
+    // 5. Add moves as needed.
+    manager.tree_mut().update_moves();
+    notice("updated moves", 1);
+}
+
+fn make_manager<'a, 'b>(
+    lex: Lexicon<'b>,
+    background: &'a [Rule],
+    data: &'a [Rule],
+    params: &Params,
+) -> MCTSManager<TRSMCTS<'a, 'b>> {
+    let mcts = TRSMCTS::new(
+        lex,
+        background,
+        data,
+        params.model,
+        params.mcts.max_depth,
+        params.mcts.max_states,
+    );
+    let state_eval = MCTSStateEvaluator;
+    let move_eval = MCTSMoveEvaluator;
+    let root = MCTSState::new(vec![], params.mcts.moves.clone());
+    MCTSManager::new(mcts, root, state_eval, move_eval)
 }

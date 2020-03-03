@@ -1,63 +1,37 @@
 [simulation]
 
 # Make this many predictions.
-n_predictions = 11
+# n_predictions = 11
+n_predictions = 5
 
 # Search for at most this many seconds for each datum.
-timeout = 600
+# timeout = 600
+timeout = 5
 
 # Scale generations_per_datum by this factor after each prediction (multiply
 # for good performance, divide for bad performance).
 confidence = 0.5
 
-[genetic]
+[mcts]
 
-# Maximum length of a rule sampled during genesis.
-max_sample_size = 10 
+# The maximum number of search moves that can be chained together.
+max_depth = 5
 
-# Per-symbol grammar weights used during genesis.
-atom_weights = [
-    1.5, # existing variables
-    1.5, # operators with arity 0
-    1.0, # operators with arity > 0
-    1.5  # invented variables
-    ]
+# The maximum number of states that can be searched.
+max_states = 1000000000
 
-# If true, genesis (and subsequent learning) produces deterministic TRSs.
-deterministic = true
-
-# How many times can search recurse?
-depth = 0
-
-# The moves used during reproduction.
+# The moves used during search
 moves = [
-    {weight = 2, mv =   "Variablize"                                              },
-    {weight = 2, mv =   "Generalize"                                              },
-    {weight = 2, mv = { "Recurse"        = 8 }                                    },
-    {weight = 2, mv =   "Compose"                                                 },
-    {weight = 1, mv = { "DeleteRules"    = 8 }                                    },
-    {weight = 1, mv =   "MemorizeOne"                                             },
-    {weight = 1, mv = { "SampleRule"     = { 0 = [1.5, 1.5, 1.0, 1.5], 1 = 10 } } },
-    {weight = 1, mv = { "RegenerateRule" = { 0 = [1.5, 1.5, 1.0, 1.5], 1 = 10 } } },
+    "Variablize",
+    "Generalize",
+    "Compose",
+    "MemorizeOne",
+    { "Memorize" = true },
+    { "Recurse" = 8 },
+    { "DeleteRules" = 8 },
+    { "SampleRule"     = { 0 = [1.5, 1.5, 1.0, 1.5], 1 = 10 } },
+    { "RegenerateRule" = { 0 = [1.5, 1.5, 1.0, 1.5], 1 = 10 } },
     ]
-
-[gp]
-
-# Select individuals after reproduction in this way.
-# Deterministically maintain 1/8 of population as the best, sample the rest.
-selection = { "Hybrid" = 0.125 }
-
-# Maintain a population of this size.
-population_size = 16 
-
-# Run tournaments of this many individuals.
-tournament_size = 1
-
-# Weight tournaments.
-weighted = true
-
-# Generate n_delta children during each generation.
-n_delta = 8
 
 [model]
 
