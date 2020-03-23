@@ -1,8 +1,8 @@
 use itertools::Itertools;
 use polytype::{ptp, tp, Context as TypeContext, TypeSchema};
 use programinduction::trs::{
-    mcts::Move, parse_lexicon, parse_rulecontexts, parse_rules, parse_trs, Lexicon, ModelParams,
-    TRS,
+    mcts::MCTSParams, parse_lexicon, parse_rulecontexts, parse_rules, parse_trs, Lexicon,
+    ModelParams, TRS,
 };
 use serde_derive::{Deserialize, Serialize};
 use std::{fs::read_to_string, path::PathBuf, process::exit};
@@ -95,13 +95,7 @@ pub struct SimulationParams {
     pub timeout: usize,
     pub n_predictions: usize,
     pub confidence: f64,
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct MCTSParams {
-    pub max_depth: usize,
-    pub max_states: usize,
-    pub moves: Vec<Move>,
+    pub deterministic: bool,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
