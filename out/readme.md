@@ -9,3 +9,4 @@ Each test is contained in its own subdirectory. Below is a description of each t
 - [`1582841764_2020-02-27-22-16-04`](1582841764_2020-02-27-22-16-04/readme.Rmd): testing various timeouts: 2min
 - [`1582908624_2020-02-28-16-50-24`](1582908624_2020-02-28-16-50-24/readme.Rmd): testing various timeouts: 5min
 - [`1583157552_2020-03-02-13-59-12`](1583157552_2020-03-02-13-59-12/readme.Rmd): testing various timeouts: 10min
+- [`1585080445_2020-03-24-20-07-25`](1585080445_2020-03-24-20-07-25/readme.Rmd): sizing search space

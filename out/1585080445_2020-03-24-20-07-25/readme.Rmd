@@ -1,0 +1,21 @@
+---
+title: "1585080445_2020-03-24-20-07-25 Analysis"
+author: Josh Rule
+date: "03/24/2020"
+output:
+  html_document:
+    fig_caption: true
+    toc: true
+    toc_float:
+      collapsed: true
+---
+
+sizing search space
+
+- [`parameters`](./parameters.toml)
+- [`problems`](./problems.txt)
+- [`jobs`](./job.txt)
+- [`results`](./results.csv)
+- number of problems: 56
+- number of runs: 500
+- number of jobs: 20
