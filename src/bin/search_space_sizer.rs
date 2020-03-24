@@ -132,17 +132,17 @@ fn compute_branching_factor<'a, 'b>(
 
     let stp = 1;
 
-    let mem = data.len();
-
-    let del = trs.len();
+    let mem = 2_usize.pow(data.len() as u32) - 1;
+    let del = 2_usize.pow(trs.len() as u32) - 1;
 
     let gen = !trs.is_empty() as usize;
-
     let com = trs.find_all_compositions().len();
-
     let rec = trs.find_all_recursions().len();
-
-    let var = trs.analyze_variablizations_by_depth().1.len();
+    let var = trs
+        .try_all_variablizations()
+        .iter()
+        .map(|rs| rs.len())
+        .sum::<usize>();
 
     let mut reg = 0;
     let lex = trs.lexicon();
