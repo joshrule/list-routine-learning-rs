@@ -4,7 +4,10 @@ use docopt::Docopt;
 use itertools::Itertools;
 use list_routine_learning_rs::*;
 use polytype::TypeSchema;
-use programinduction::trs::{EnumerationLimit, Environment, Lexicon, TRS};
+use programinduction::trs::{
+    mcts::{take_mcts_step, TRSMCTS},
+    EnumerationLimit, Environment, Lexicon, TRS,
+};
 use rand::{
     seq::{IteratorRandom, SliceRandom},
     thread_rng, Rng,
@@ -44,22 +47,25 @@ fn main() {
         });
     let sam_rules = sample_all_rules(&lex, params.mcts.max_size);
     let mut trs = TRS::new_unchecked(&lex, true, &background, Vec::new());
+    let mcts = TRSMCTS::new(
+        lex.clone(),
+        &background,
+        params.simulation.deterministic,
+        &data,
+        None,
+        params.model,
+        params.mcts,
+    );
     // For Moves 1--5:
     for mv in 0..5 {
+        let mut steps_remaining = 2;
         let mut mov = "stop".to_string();
         // figure out how many possible options there are
         let options = compute_branching_factor(&trs, &data, params.mcts.max_size, sam_rules.len());
         // pick one move and let the result be trs
-        while mov == "stop".to_string() {
-            let (new_trs, new_mov) = trs.take_move(
-                &data,
-                params.mcts.invent,
-                params.mcts.max_size,
-                &sam_rules,
-                rng,
-            );
-            trs = new_trs;
-            mov = new_mov;
+        while steps_remaining != 1 {
+            steps_remaining = 2;
+            mov = take_mcts_step(&mut trs, &mut steps_remaining, &mcts, rng);
         }
         // record the results.
         println!(
