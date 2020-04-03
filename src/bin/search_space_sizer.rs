@@ -6,7 +6,7 @@ use list_routine_learning_rs::*;
 use polytype::TypeSchema;
 use programinduction::trs::{
     mcts::{take_mcts_step, TRSMCTS},
-    EnumerationLimit, Environment, Lexicon, TRS,
+    Environment, GenerationLimit, Lexicon, TRS,
 };
 use rand::{
     seq::{IteratorRandom, SliceRandom},
@@ -81,7 +81,7 @@ fn main() {
 fn sample_all_rules(lex: &Lexicon, max_size: usize) -> Vec<Rule> {
     let mut sam_lex = lex.clone();
     let schema = TypeSchema::Monotype(sam_lex.context_mut().new_variable());
-    let limit = EnumerationLimit::SideSize(max_size);
+    let limit = GenerationLimit::TermSize(max_size);
     let mut ctx = sam_lex.context().clone();
     sam_lex.enumerate_rules(&schema, limit, true, &mut ctx)
 }
@@ -155,7 +155,8 @@ fn compute_branching_factor<'a, 'b>(
     for rule in &trs.utrs().rules {
         let mut types = HashMap::new();
         let mut ctx = lex.context().clone();
-        if lex.infer_rule(rule, &mut types, &mut ctx).is_ok() {
+        let mut env = Environment::from_vars(&rule.variables(), &mut ctx);
+        if lex.infer_rule(rule, &mut types, &mut env, &mut ctx).is_ok() {
             for (_, place) in rule.subterms() {
                 let env = Environment::from_rule(rule, &types, place[0] == 0);
                 let schema = types[&place].generalize(&lex.free_vars(&mut ctx));

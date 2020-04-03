@@ -7,14 +7,13 @@
 //! [3]: https://en.wikipedia.org/wiki/Rewriting#Term_rewriting_systems
 //! "Wikipedia - Term Rewriting Systems"
 // TODO: Run *either* GP or MCTS.
-// TODO: update data should invalidate anything with infinitely bad likelihood...
 
 use docopt::Docopt;
 use itertools::Itertools;
 use list_routine_learning_rs::*;
 use programinduction::{
     trs::{
-        mcts::{MCTSMoveEvaluator, MCTSState, MCTSStateEvaluator, TRSMCTS},
+        mcts::{MCTSMoveEvaluator, MCTSStateEvaluator, TRSMCTS},
         Hypothesis, Lexicon, TRS,
     },
     MCTSManager,
@@ -79,9 +78,13 @@ fn main() {
         "search failed",
     );
 
-    notice(format!("search time: {:.3e}s", search_time), 0);
     let elapsed = start.elapsed().as_secs_f64();
-    notice(format!("total time: {:.3e}s", elapsed), 0);
+    report_results(search_time, elapsed, &predictions);
+}
+
+fn report_results(search_time: f64, total_time: f64, predictions: &[Prediction]) {
+    notice(format!("search time: {:.3e}s", search_time), 0);
+    notice(format!("total time: {:.3e}s", total_time), 0);
     println!("trial,accuracy,n_seen,program");
     for (n, (accuracy, n_seen, program)) in predictions.iter().enumerate() {
         println!(
@@ -155,10 +158,11 @@ fn best_so_far<'a, 'b, 'c>(pop: &'c [Hypothesis<'a, 'b>]) -> &'c TRS<'a, 'b> {
 
 fn make_prediction<'a, 'b>(trs: &TRS<'a, 'b>, input: &Term, params: &Params) -> Term {
     let utrs = trs.full_utrs();
-    let sig = trs.lexicon().signature();
+    let lex = trs.lexicon();
+    let sig = lex.signature();
     let mut trace = Trace::new(
         &utrs,
-        &sig,
+        sig,
         input,
         params.model.likelihood.p_observe,
         params.model.likelihood.max_size,
@@ -181,13 +185,13 @@ fn make_prediction<'a, 'b>(trs: &TRS<'a, 'b>, input: &Term, params: &Params) -> 
 
 fn update_timeout(correct: bool, timeout: &mut usize, ceiling: usize, scale: f64) {
     if !correct && *timeout == ceiling {
-        notice(format!("timeout remains at ceiling of {}s", timeout), 2);
+        notice(format!("timeout remains at ceiling of {}s", timeout), 1);
         return;
     }
     let change = if correct { "de" } else { "in" };
     let factor = if correct { scale } else { scale.recip() };
     *timeout = ((*timeout as f64) * factor).ceil().min(ceiling as f64) as usize;
-    notice(format!("timeout {}creased to {}s", change, timeout), 2);
+    notice(format!("timeout {}creased to {}s", change, timeout), 1);
 }
 
 fn search<'a, 'b, R: Rng>(
@@ -198,39 +202,42 @@ fn search<'a, 'b, R: Rng>(
     params: &mut Params,
     rng: &mut R,
 ) -> Result<f64, String> {
-    let mut manager = make_manager(lex, background, &[], params);
+    notice("making manager", 1);
+    let mut manager = make_manager(lex, background, params, &[], Some(&data[0].lhs), rng);
     let mut timeout = params.simulation.timeout;
     let mut search_time = 0.0;
     let mut n_seen = 0;
-    notice("trial,nlposterior,trs", 1);
+    notice("n,trial,nlposterior,trs", 1);
     for n_data in 0..data.len() {
         notice(format!("n_data: {}", n_data), 0);
-        notice("updating data", 0);
-        update_data(&mut manager, &data[..n_data]);
-        manager.tree().show();
-        // TODO: Do we want to do something different on the first trial?
-        // manager.step_until(rng, |_| now.elapsed().as_secs_f64() > (timeout as f64));
-        for _ in 0..10 {
-            let now = Instant::now();
-            manager.step(rng);
-            search_time += now.elapsed().as_secs_f64();
-            for h in manager.tree().mcts().trss.iter().skip(n_seen) {
-                let h_str = h.trs.to_string();
-                let lpost = h.lposterior;
-                notice_flat(format!("{},{:.4},{:?}", n_data + 1, lpost, h_str), 1);
-                n_seen += 1;
-            }
+        if n_data > 0 {
+            update_data(&mut manager, &data[..n_data], Some(&data[n_data].lhs));
         }
-        println!("search_time: {:.4}", search_time);
-        println!("searched: {}", manager.tree().mcts().trss.len());
+        let now = Instant::now();
+        manager.step_until(rng, |_| now.elapsed().as_secs_f64() > (timeout as f64));
+        search_time += now.elapsed().as_secs_f64();
+        for h in manager.tree().mcts().hypotheses.iter().skip(n_seen) {
+            let h_str = h.trs.to_string();
+            let lpost = h.lposterior;
+            notice_flat(
+                format!("{},{},{:.4},{:?}", n_seen, n_data + 1, lpost, h_str),
+                1,
+            );
+            n_seen += 1;
+        }
+        notice(format!("search_time: {:.4}", search_time), 0);
+        notice(
+            format!("revisions: {}", manager.tree().mcts().revisions.len()),
+            0,
+        );
+        notice(
+            format!("terminals: {}", manager.tree().mcts().terminals.len()),
+            0,
+        );
         // Make a prediction.
         notice("making prediction", 0);
-        let correct = process_prediction(
-            &data[..n_data + 1],
-            &manager.tree().mcts().trss,
-            params,
-            predictions,
-        );
+        let trss = &manager.tree().mcts().hypotheses;
+        let correct = process_prediction(&data[..=n_data], trss, params, predictions);
         update_timeout(
             correct,
             &mut timeout,
@@ -238,45 +245,63 @@ fn search<'a, 'b, R: Rng>(
             params.simulation.confidence,
         );
     }
+    notice("final tree", 0);
+    manager.tree().show();
     Ok(search_time)
 }
 
-fn update_data<'a, 'b>(manager: &mut MCTSManager<TRSMCTS<'a, 'b>>, data: &'a [Rule]) {
+fn update_data<'a, 'b>(
+    manager: &mut MCTSManager<TRSMCTS<'a, 'b>>,
+    data: &'a [Rule],
+    input: Option<&'a Term>,
+) {
+    notice("updating data", 1);
     // 0. Add the new data to the MCTS object.
-    manager.tree_mut().mcts_mut().obs = data;
+    manager.tree_mut().mcts_mut().data = data;
+    manager.tree_mut().mcts_mut().input = input;
 
     // 1. For each object in the object list, call change_data on the hypothesis.
-    for h in manager.tree_mut().mcts_mut().trss.iter_mut() {
-        h.change_data(data);
+    notice("updating terminals", 2);
+    for hypothesis in manager.tree_mut().mcts_mut().hypotheses.iter_mut() {
+        hypothesis.change_data(data, input);
+        notice(
+            format!(
+                "{:.4}\t\"{}\"",
+                hypothesis.lposterior,
+                hypothesis.trs.to_string().lines().join(" ")
+            ),
+            3,
+        );
     }
-    notice("rescored objects", 1);
     // 2. Copy the evaluation information to nodes from objects.
     // 3. Iteratively update the Q values (the root Q is the sum over the child Qs).
-    // 4. Copy the node Q to the moves while iterating over the list of moves.
+    notice("updating states", 2);
     manager.tree_mut().reevaluate_states();
-    notice("reevaluated states", 1);
 
-    // 5. Add moves as needed.
+    // 4. Add moves as needed.
+    notice("updating moves", 2);
     manager.tree_mut().update_moves();
-    notice("updated moves", 1);
 }
 
-fn make_manager<'a, 'b>(
+fn make_manager<'a, 'b, R: Rng>(
     lex: Lexicon<'b>,
     background: &'a [Rule],
-    data: &'a [Rule],
     params: &Params,
+    data: &'a [Rule],
+    input: Option<&'a Term>,
+    rng: &mut R,
 ) -> MCTSManager<TRSMCTS<'a, 'b>> {
-    let mcts = TRSMCTS::new(
+    let mut mcts = TRSMCTS::new(
         lex,
         background,
+        params.simulation.deterministic,
         data,
+        input,
         params.model,
-        params.mcts.max_depth,
-        params.mcts.max_states,
+        params.mcts,
     );
     let state_eval = MCTSStateEvaluator;
     let move_eval = MCTSMoveEvaluator;
-    let root = MCTSState::new(vec![], params.mcts.moves.clone());
-    MCTSManager::new(mcts, root, state_eval, move_eval)
+    let root = mcts.root();
+    MCTSManager::new(mcts, root, state_eval, move_eval, rng)
 }
