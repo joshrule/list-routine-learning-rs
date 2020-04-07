@@ -1,6 +1,9 @@
 #!/bin/bash
 
 # a simple script for grabbing a bunch of log files and dumping them into a CSV.
+
+[ $# -ne 1 ] && { echo "Usage: $0 <result_dir>"; exit 1; }
+
 cd $1
 
 OUTFILE="results.csv"

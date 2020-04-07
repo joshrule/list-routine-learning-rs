@@ -1,0 +1,357 @@
+---
+title: "1586262756_2020-04-07-12-32-36 Analysis"
+author: Josh Rule
+date: "04/07/2020"
+output:
+  html_document:
+    fig_caption: true
+    toc: true
+    toc_float:
+      collapsed: true
+---
+
+MCTS initial run with 1min timeout
+
+- [`parameters`](./parameters.toml)
+- [`problems`](./problems.txt)
+- [`jobs`](./job.txt)
+- [`results`](./results.csv)
+- number of problems: 77
+- number of runs: 5
+- number of jobs: 50
+
+```{r setup, include=F}
+library(tidyverse)
+library(tidyboot)
+library(zoo)
+
+job <- read_tsv("job.txt") %>%
+  select(-Host, -Receive, -Send) %>%
+  arrange(Seq)
+results <- read_csv("results.csv") %>%
+  select(-n_seen) %>%
+  mutate(trial = trial + 1,
+         problem = str_sub(problem, 7))
+```
+
+## Analysis
+
+```{r utilities, include=FALSE}
+rank_participants <- function(dt) {
+  dt %>%
+    group_by(subject) %>%
+    dplyr::summarize(k.test=sum(accuracy)) %>%
+    mutate(rank=rank(1/k.test, ties.method='random')) %>%
+    select(-k.test)
+}
+last_error <- function(xs) {
+  # return the index of the last element to contain a 0
+  indices <- which(!as.logical(xs))
+  if (length(indices) == 0) {
+    0
+  } else {
+    max(indices)
+  }
+}
+m_of_n_correct <- function(m, n, xs) {
+  rollapply(xs, n, sum, align="right", fill=0) >= m
+}
+first_m_of_n <- function(m, n, xs) {
+  if (m == 0) {
+    0
+  } else {
+    indices <- which(m_of_n_correct(m, n ,xs))
+    if (length(indices) == 0) {
+      NA
+    } else {
+      min(indices)
+    }    
+  }
+}
+first_m <- function(m, xs) {
+  if (m == 0) {
+    0
+  } else {
+    indices <- which(as.logical(xs))
+    if (length(indices) < m) {
+      NA
+    } else {
+      indices[m]
+    }
+  }
+}
+incremental_probability <- function(xs) {
+  seq_along(xs) %>% map_dbl(~ sum(xs[.:length(xs)]/(length(xs)-.+1)))
+}
+cumulative_probability <- function(xs) {
+  seq_along(xs) %>% map_dbl(~ sum(xs[1:.]/.))
+}
+exp_weighted_helper <- function(xs) {
+  ws <- rev(1/(2^(seq_along(xs)-1)))
+  sum(xs*ws)/sum(ws)
+}
+exp_weighted_probability <- function(xs) {
+  seq_along(xs) %>% map_dbl(~ exp_weighted_helper(xs[1:.]))
+}
+```
+
+### Compute
+
+We ran a total of `r nrow(job)` jobs over:
+
+- `r round(sum(job$JobRuntime)/3600, 2)` CPU hours (per-problem mean: `r round(mean(job$JobRuntime)/60, 2)`min, SD:  `r round(sd(job$JobRuntime), 2)`, quartiles: `r round(quantile(job$JobRuntime), 2)`)
+- `r round((max(job$JobRuntime + job$Starttime) - min(job$Starttime))/60, 2)` wall min
+
+```{r plot-runtime, echo=F, warning=F, out.width="50%", fig.align='center', fig.show='hold', fig.cap="Number of runs (y-axis) with a given runtime(x-axis)."}
+plot_runtime <- function(data) {
+  ggplot(data, aes(x=JobRuntime)) +
+    geom_histogram(bins=50) +
+    ylab("Number of runs") +
+    xlab("Runtime (s)") +
+    theme(legend.position="none")
+}
+plot_runtime(job)
+```
+
+### What's the overall accuracy?
+
+```{r accuracy-overall, cache=T, echo=F, warning=F}
+accuracy_overall <- results %>%
+  group_by(problem, run) %>%
+  dplyr::summarize(mu = mean(accuracy)) %>%
+  group_by(problem) %>%
+  tidyboot_mean(mu, nboot=500)
+```
+
+```{r plot-accuracy, dependson=c("accuracy-overall"), echo=F, warning=F, out.width="100%", fig.height=7, fig.width=21, fig.align='center', fig.show='hold', fig.cap="Mean performance (y-axis) by concept (x-axis). Bars are bootstrapped 95% CIs"}
+plot_accuracy_overall <- function(data) {
+  ggplot(data, aes(x=problem, y=100*empirical_stat, fill=problem)) +
+    geom_bar(stat='identity') +
+    geom_errorbar(aes(x=problem, ymin=100*ci_lower, ymax=100*ci_upper), width=0.5) +
+    ylab("Mean Performance (%)") +
+    xlab("Problem") +
+    theme(legend.position="none") +
+    theme(axis.text.x = element_text(size=12, angle = 90, hjust = 1))
+}
+plot_accuracy_overall(accuracy_overall)
+```
+
+```{r correct-total, cache=T, echo=F, warning=F}
+correct_total <- results %>%
+    group_by(problem, run) %>%
+    dplyr::summarize(k=sum(accuracy)) %>%
+    mutate(k = factor(x=k, c(0,1,2,3,4,5,6,7,8,9,10,11))) %>%
+    group_by(problem, .drop=F) %>%
+    count(k)
+```
+
+```{r correct-per-trial, cache=T, echo=F, warning=F}
+correct_per_trial <- results %>%
+        group_by(problem, trial) %>%
+        tidyboot_mean(column=accuracy, nboot=500)
+```
+
+```{r plot-correct, cache=T, dependson=c("correct-total", "correct-per-trial"), echo=F, warning=F, out.width="100%", fig.width=14, fig.height=10.5, fig.show='hold', fig.align='center', fig.cap="(Top): Number of subjects (y-axis) for each possible number of correct responses (x-axis) by concept (subplots); (Bottom): Mean performance (y-axis) by trial (x-axis) by concept (subplots), with bootstrapped 95% CI (shaded regions)."}
+plot_correct_total <- function(data) {
+  ggplot(data, aes(x=k, y=n, group=problem, fill=problem)) +
+    geom_bar(size=1.5, na.rm=T, stat="identity") +
+    facet_wrap(~problem) +
+    xlab("Number of Correct Trials") +
+    ylab("Number of Runs") +
+    theme(legend.position = "none")
+}
+plot_correct_per_trial <- function(data) {
+  ggplot(data, aes(x=trial, y=empirical_stat)) +
+    geom_ribbon(aes(x=trial, ymin=ci_lower, ymax=ci_upper, fill=problem), linetype=0, alpha=0.2) + 
+    geom_line(aes(color=problem), size=1) +
+    facet_wrap(~problem) +
+    xlab("Trial") +
+    ylab("Mean Performance (%)") +
+    scale_x_continuous(breaks=seq(1, 11)) +
+    labs(fill="Function", color="Function") +
+    theme(legend.position = "none")
+}
+plot_correct_total(correct_total)
+plot_correct_per_trial(correct_per_trial)
+```
+
+### Do most runs solve most problems?
+
+```{r how-many, cache=T, echo=F, warning=F}
+make_how_many <- function(tbl) {
+  tbl %>%
+    group_by(problem, run) %>%
+    dplyr::summarize(learned = !is.na(first_m_of_n(3,3, accuracy))) %>%
+    group_by(problem) %>%
+    dplyr::summarize(n_learned = sum(learned))
+}
+how_many <- make_how_many(results)
+```
+
+```{r plot-how-many, dependson=c("how-many"), echo=F, warning=F, fig.align='center', fig.show='hold', out.width="50%", fig.cap="Number of problems (y-axis) for which the model solved the problem N times (x-axis). A problem is solved after 3 consecutive correct responses."}
+plot_how_many <- function(data) {
+  data <- data %>% group_by(n_learned) %>% count()
+  ggplot(data, aes(x=n_learned, y=n)) +
+    geom_bar(stat='identity') +
+    xlab("Number of Functions Learned") +
+    ylab("Number of Participants") +
+    scale_x_continuous(breaks=seq(0,5)) +
+    theme(legend.position = "none")
+}
+plot_how_many(how_many)
+```
+
+```{r plot-how-many-per-problem, dependson=c("how-many"), echo=F, warning=F, fig.align='center', fig.height=7, fig.width=21, fig.show='hold', out.width="100%", fig.cap="Number of runs (y-axis) for which the model solved each problem (x-axis). A problem is solved after 3 consecutive correct responses."}
+plot_how_many_per_problem <- function(data) {
+  ggplot(data, aes(x=problem, y=n_learned, fill=problem)) +
+    geom_bar(stat='identity') +
+    xlab("Problem") +
+    ylab("Number of runs") +
+    theme(legend.position = "none") +
+    theme(axis.text.x = element_text(size=12, angle = 90, hjust = 1))
+}
+plot_how_many_per_problem(how_many)
+```
+
+### When is the last error?
+
+```{r last-error, echo=FALSE, warning=FALSE, fig.align='center', fig.cap="Number of runs (y-axis) whose last error occurred in a given trial (x-axis) by problem (subplots).", fig.width=14, fig.height=10.5}
+plot_last_error <- function(data) {
+  data <- data %>%
+    group_by(problem, run) %>%
+    dplyr::summarize(
+      last_error = factor(last_error(accuracy), levels=1:11)) %>%
+    group_by(problem, last_error) %>%
+    count()
+  ggplot(data, aes(x=last_error, y=n, fill=problem)) +
+    geom_bar(stat="identity") +
+    facet_wrap(~problem) +
+    xlab("Trial of Last Error") +
+    ylab("Number of Participants") +
+    scale_y_continuous(breaks=seq(0, 100, by = 20)) +
+    theme(legend.position= "none")
+}
+plot_last_error(results)
+```
+
+
+### When is the first 3 in a row?
+```{r three, echo=FALSE, warning=FALSE, fig.align='center', fig.width=14, fig.height=10.5, fig.cap="Number of runs (y-axis) first giving 3 consecutive correct responses on a given trial (x-axis) by problem (subplots)."}
+plot_three <- function(data) {
+    raw <- data %>%
+      group_by(problem, run) %>%
+      dplyr::summarize(three = first_m_of_n(3,3,accuracy)) %>%
+      mutate(three = addNA(factor(three, levels=seq(1, 11)))) %>%
+      group_by(problem) %>%
+      count(three, .drop=F) %>%
+      mutate(pct = n/sum(n),
+             three = fct_recode(three, NULL="NA")) %>%
+      drop_na(three)
+    sums <- raw %>% group_by(problem) %>% dplyr::summarize(n = sum(pct))
+    ggplot(raw, aes(x=three, y=n, group=problem, fill=problem)) +
+      geom_bar(stat="identity") +
+      geom_segment(size = 6, color = "#666666",
+                   aes(x = 10.5, xend = 10.5, y = 6, yend = 9)) +
+      geom_segment(data = sums, size = 6,
+                   aes(x = 10.5, xend = 10.5, y = 6, yend = 6+3*n, color=problem)) +
+      facet_wrap(~problem) +
+      xlab("First trial to get three in a row") +
+      ylab("Number of Runs") +
+      scale_y_continuous(breaks=c(0, 5)) +
+      theme(legend.position= "none")
+}
+plot_three(results)
+```
+
+### Errors after N correct?
+
+```{r after-n, cache=T, echo=F, warning=F}
+single_after_n <- function(data, n) {
+  data <- data %>%
+    group_by(problem, run) %>%
+    filter(trial > first_m(n,accuracy)) %>%
+    mutate(n_correct = n) %>%
+    select(run, problem, trial, accuracy, n_correct) %>%
+    group_by(problem, n_correct) %>%
+    tidyboot_mean(column = accuracy, nboot=500)
+}
+make_after_n <- function(data) {
+  seq(0, 11) %>%
+    map(~single_after_n(data, .)) %>%
+    bind_rows()
+}
+after_n <- make_after_n(results)
+```
+
+```{r plot-after-n, dependson=c("after-n"), echo=F, warning=F, fig.align='center', fig.width=14, fig.height=10.5, fig.cap="Probability of correct response (y-axis) after N correct responses (x-axis) by concept (subplots). Errors bars are bootstrapped 95% CI."}
+plot_after_n <- function(data) {
+  ggplot(data, aes(x=n_correct, y=empirical_stat, group=problem)) +
+    geom_bar(aes(fill=problem), stat="identity") +
+    geom_errorbar(aes(ymin = ci_lower, ymax=ci_upper), color="black", size=0.25, width=0.5) +
+    facet_wrap(~problem) +
+    xlab("Number correct") +
+    ylab("Mean performance") +
+    scale_x_continuous(breaks=seq(0,11)) +
+    coord_cartesian(xlim=c(0, 11)) +
+    theme(legend.position= "none")
+}
+plot_after_n(after_n)
+```
+
+### Errors after N in a row?
+
+```{r after-ninarow, cache=T, echo=F, warning=F}
+single_after_ninarow <- function(data, n) {
+  data <- data %>%
+    group_by(problem, run) %>%
+    filter(trial > first_m_of_n(n,n,accuracy)) %>%
+    mutate(n_in_a_row = n) %>%
+    select(problem, run, trial, accuracy, n_in_a_row) %>%
+    group_by(problem, n_in_a_row) %>%
+    tidyboot_mean(column = accuracy, nboot=500)
+}
+make_after_ninarow <- function(data) {
+  seq(0, 11) %>%
+    map(~single_after_ninarow(data, .)) %>%
+    bind_rows()
+}
+after_ninarow <- make_after_ninarow(results)
+```
+
+```{r plot-after-ninarow, dependson=c("after-ninarow"), echo=F, warning=F, fig.align='center', fig.width=14, fig.height=10.5, fig.cap="Probability of correct response (y-axis) after giving N consecutive correct responses (x-axis) by problem (subplots). Errors bars are bootstrapped 95% CI."}
+plot_after_ninarow <- function(data) {
+  ggplot(data, aes(x=n_in_a_row, y=empirical_stat, group=problem)) +
+    geom_bar(aes(fill=problem), stat="identity") +
+    geom_errorbar(aes(ymin = ci_lower, ymax=ci_upper), size=0.25, color="black", width=0.5) +
+    facet_wrap(~problem) +
+    xlab("N in a row correct") +
+    ylab("Mean performance") +
+    scale_x_continuous(breaks=seq(0,11)) +
+    coord_cartesian(xlim=c(0, 11)) +
+    theme(legend.position= "none")
+}
+plot_after_ninarow(after_ninarow)
+```
+
+### Errors before 3 in a row?
+
+```{r backward, cache=T, echo=F, warning=F}
+backward <- results %>%
+  group_by(problem, run) %>%
+  mutate(timeline = trial - first_m_of_n(3,3,accuracy)) %>%
+  filter(!is.na(timeline)) %>%
+  group_by(problem, timeline, .drop=F) %>%
+  tidyboot_mean(column = accuracy, nboot=500) %>%
+  mutate(leadup = timeline %in% seq(-3, 0))
+```
+
+```{r plot-backward, dependson=c("backward"), echo=F, warning=F, fig.align='center', fig.width=14, fig.height=10.5, fig.cap="A backward learning curve in the style of Bower & Trabasso. Mean performance (y-axis), for each trial relative to the first third consecutive correct response (x-axis). Error bars are bootstrapped 95% CIs. The underlined portion is constant across all plots (the leadup to three-in-a-row) and so removed for clarity."}
+ggplot(backward, aes(x=timeline, y=empirical_stat)) +
+  geom_bar(aes(fill=problem, alpha=((1-leadup)+0.2)/(2/3)), width=0.8, stat="identity") +
+  geom_errorbar(aes(ymin = ci_lower, ymax = ci_upper), size=0.25, width = 0.5) +
+  geom_segment(size=0.25, color="#666666", aes(x = -3.5, xend = 0.5, y=-0.03, yend=-0.03)) +
+  facet_wrap(~problem) +
+  xlab("Trial (relative to learning concept)") +
+  ylab("Mean Performance") +
+  theme(legend.position = "none")
+```
