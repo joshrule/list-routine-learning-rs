@@ -59,20 +59,22 @@ fn main() {
     // For Moves 1--5:
     for mv in 0..5 {
         let mut steps_remaining = 2;
-        let mut mov = "stop".to_string();
         // figure out how many possible options there are
         let options = compute_branching_factor(&trs, &data, params.mcts.max_size, sam_rules.len());
         // pick one move and let the result be trs
         while steps_remaining != 1 {
             steps_remaining = 2;
-            mov = take_mcts_step(&mut trs, &mut steps_remaining, &mcts, rng);
+            if let Some(new_trs) =
+                take_mcts_step(Some(trs.clone()), &mut steps_remaining, &mcts, rng)
+            {
+                trs = new_trs;
+            }
         }
         // record the results.
         println!(
-            "{},{},{},{}",
+            "{},{},{}",
             &problem_dir[4..],
             mv,
-            mov,
             options.iter().map(|x| x.to_string()).join(","),
         );
     }
