@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+
+<!--
+
+     d3 collapsible directed acyclical graph for MCTS visualization
+     author: Joshua S. Rule
+     license: GNU General Public License v3.0
+
+     TODO: load underscore
+-->
+
+<meta charset="UTF-8">
+<head>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/5.15.0/d3.min.js"></script>
+    <style>
+     #info-box {
+         font-family: SFMono-Regular,Consolas,"Liberation Mono",Menlo,Courier,monospace;
+         font-size: 75%;
+     }
+    </style>
+</head>
+<body>
+    <script src="tree.js"></script>
+    <script src="draw_tree.js"></script>
+    <div id="instructions">
+        <p>
+            <b>MCTS Tree Visualization</b>. Click green nodes to toggle subtrees. Black nodes are terminal. Gray nodes were never visited. Mouse over a node to see its information listed below. You can pan/zoom as needed.
+        </p>
+    </div>
+    <div id="info-box"></div>
+</body>

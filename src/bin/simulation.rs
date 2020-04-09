@@ -245,8 +245,10 @@ fn search<'a, 'b, R: Rng>(
             params.simulation.confidence,
         );
     }
-    notice("final tree", 0);
-    manager.tree().show();
+    manager
+        .tree()
+        .to_record("tree.json")
+        .map_err(|_| "Record failed")?;
     Ok(search_time)
 }
 

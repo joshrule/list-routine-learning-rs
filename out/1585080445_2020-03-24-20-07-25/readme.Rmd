@@ -10,6 +10,33 @@ output:
       collapsed: true
 ---
 
+## Introduction
+
+We want to learn Term Rewriting Systems (TRS) that can compactly and accurately explain a series of i/o examples for list transformations. We've been thinking about doing this using Monte Carlo Tree Search (MCTS), but it's unclear if the problem is too complex for MCTS.
+
+In what follows, use the term *move* to refer to the various ways we can revise a TRS and *step* to refer to a specific instance of applying a move.
+
+We want to figure out how complex the search space is for a given collection of moves and number of steps. The complexity of several moves is hard to figure out analytically, so we'll estimate the search space size empirically by running a series of simulations in which we randomly select a series of steps and, for each step, compute the number of options for each random choice. From that, we can then roughly estimate the complexity of the entire search space as the product over the number of options available at each step.
+
+By doing so, we learn that most moves have reasonably small complexities, so MCTS seems like a valid approach provided we can compartmentalize the large parts of the space associated with the most complex moves.
+
+## Method
+
+I ran a simulation to estimate the size of the MCTS search space using 10 moves  (delete rules, memorize data, sample rule, regenerate subrule, generalize, recurse, compose, variablize, anti-unify, and stop) over a series of 5 steps. The simulation began with an empty term rewriting system and a set of 10 i/o examples from 1 of the 56 problems in wave 2 (chosen uniformly at random). It then computed the branching factor for each possible move and took a step by randomly selecting a move other than stop and randomly selecting one possible outcome of that move. It then repeated this procedure 4 more times, computing the branching factor for each of a total of 5 steps. I repeated this process 500 times, randomly sampling a problem and i/o examples each time.
+
+## Results
+
+I've included several plots below, but my main observations are:
+
+- The size of the overall search space isn't strongly affected by what problem we're solving.
+- Sampling and regeneration introduce **by far** the most complexity into the search space.
+
+  This is true even with fairly strong bounds on both moves&mdash;the new term sampled by regeneration could have a size of at most 5, and the left hand side and right hand side of sampled rules could also be at most size 5. If we remove those bounds, the search space is effectively infinite.
+
+- While the first step has a relatively lower complexity for many moves, the complexity of subsequent steps is relatively similar for all but delete, which grows exponentially with the number of rules in the TRS.
+- The overall complexity of the search space changes very little from step to step, largely because sampling is so complex. The main driver in growth is regeneration.
+
+<!--
 sizing search space
 
 - [`parameters`](./parameters.toml)
@@ -19,3 +46,203 @@ sizing search space
 - number of problems: 56
 - number of runs: 500
 - number of jobs: 20
+-->
+
+```{r setup, include=F}
+library(tidyverse)
+library(tidyboot)
+library(zoo)
+library(coda)
+
+job <- read_tsv("job.txt") %>%
+  select(-Host, -Receive, -Send) %>%
+  arrange(Seq)
+results <- read_csv("results.csv") %>%
+  mutate(run = str_sub(run, 5, 7),
+         lgg = 1*(del >= 3))
+```
+
+### Overall
+
+```{r size-overall, cache=T, echo=F, warning=F}
+size_overall <- results %>%
+  group_by(run) %>%
+  mutate (total = mem + del + stp + gen + com + rec + var + reg + sam + lgg,
+          total_wo_sam = total - sam,
+          lg_total = log2(total),
+          lg_total_wo_sam = log2(total_wo_sam)) %>%
+  dplyr::summarize(bits_overall = sum(lg_total),
+                   bits_wo_sam = sum(lg_total_wo_sam))
+```
+
+```{r plot-size-overall, dependson=c("size-overall"), echo=F, warning=F, out.width="100%", fig.height=7, fig.width=14, fig.align='center', fig.show='hold', fig.cap="Count of runs (y-axis) by search space size measured in bits (x-axis). Green includes all moves, while orange subtracts out rule sampling to better highlight variation in other moves. Black segments show the empirical 95% HDI."}
+plot_size_overall <- function(data) {
+  wo_sam_interval <- HPDinterval(as.mcmc(size_overall$bits_wo_sam), prob=0.95)
+  overall_interval <- HPDinterval(as.mcmc(size_overall$bits_overall), prob=0.95)
+  ggplot(data) +
+    geom_histogram(aes(x=bits_overall), bins=200, fill="#1b9e77", alpha = 0.8) +
+    geom_histogram(aes(x=bits_wo_sam), bins=200, fill="#d95f02", alpha = 0.8) +
+    geom_segment(aes(y=-1.5, yend=-1.5, x=overall_interval[[1]], xend=overall_interval[[2]]), size=1, color="black") +
+    geom_segment(aes(y=-1.5, yend=-1.5, x=wo_sam_interval[[1]], xend=wo_sam_interval[[2]]), size=1, color="black") +
+    xlab("Search complexity (bits)") +
+    ylab("Number of runs (498 total)") +
+    theme(legend.position="none") +
+    scale_x_continuous(breaks=seq(50, 110, 5))
+}
+plot_size_overall(size_overall)
+```
+
+### By step
+
+```{r size-revision, cache=T, echo=F, warning=F}
+size_revision <- results %>%
+  group_by(move) %>%
+  mutate (total = mem + del + stp + gen + com + rec + var + reg + sam + lgg,
+          total_wo_sam = total - sam,
+          bits_overall = log2(total),
+          bits_wo_sam = log2(total_wo_sam)) %>%
+  select(-mem, -del, -stp, -gen, -com, -rec, -var, -reg, -sam, -lgg)
+```
+
+```{r plot-size-revision, dependson=c("size-revision"), echo=F, warning=F, out.width="100%", fig.height=7, fig.width=14, fig.align='center', fig.show='hold', fig.cap="**top:** Search space size measured in bits (y-axis) for each step (x-axis). You can also see the raw data (scatter), the density (violin), the empirical mean (center of boxplot), bootstrapped 95% CI (hinges on boxplot), and empirical 95% HDI (whiskers of boxplot). I realize this is an abuse of the boxplot :-) **bottom:** Same as top but without sampling to see impact of other moves more clearly."}
+plot_size_revision <- function(data) {
+  data <- data %>% ungroup() %>% mutate(move = factor(move))
+  cis <- data %>% group_by(move) %>% tidyboot_mean(column=bits_overall, nboot=500)
+  hdi <- data %>% ungroup()  %>% group_by(move) %>%
+    dplyr::summarize(hdi_lower = HPDinterval(as.mcmc(bits_overall), prob=0.95)[[1]],
+                     hdi_upper = HPDinterval(as.mcmc(bits_overall), prob=0.95)[[2]],
+                     mu = mean(bits_overall))
+  stats <- left_join(cis, hdi, by=c("move"))
+  ggplot(data, aes(x=move, group=move, y=bits_overall)) +
+    geom_violin(aes(color=move)) +
+    geom_jitter(aes(color=move), alpha = 0.3, width=0.2) +
+    geom_boxplot(data=stats, mapping=aes(y=empirical_stat, ymax=hdi_upper, ymin=hdi_lower, middle=empirical_stat, lower=ci_lower, upper=ci_upper, color=move), alpha=0, width=0.5, stat="identity", outlier.shape=NA) +
+    ylab("Step complexity (bits)") +
+    xlab("Step") +
+    theme(legend.position="none")
+}
+plot_size_revision(size_revision)
+
+plot_size_revision_wo_sam <- function(data) {
+  data <- data %>% ungroup() %>% mutate(move = factor(move))
+  cis <- data %>% group_by(move) %>% tidyboot_mean(column=bits_wo_sam, nboot=500)
+  hdi <- data %>% ungroup()  %>% group_by(move) %>%
+    dplyr::summarize(hdi_lower = HPDinterval(as.mcmc(bits_wo_sam), prob=0.95)[[1]],
+                     hdi_upper = HPDinterval(as.mcmc(bits_wo_sam), prob=0.95)[[2]],
+                     mu = mean(bits_wo_sam))
+  stats <- left_join(cis, hdi, by=c("move"))
+  ggplot(data, aes(x=move, group=move, y=bits_wo_sam)) +
+    geom_violin(aes(color=move)) +
+    geom_jitter(aes(color=move), alpha = 0.3, width=0.2) +
+    geom_boxplot(data=stats, mapping=aes(y=empirical_stat, ymax=hdi_upper, ymin=hdi_lower, middle=empirical_stat, lower=ci_lower, upper=ci_upper, color=move), alpha=0, width=0.5, stat="identity", outlier.shape=NA) +
+    ylab("Step complexity (bits)") +
+    xlab("Step") +
+    theme(legend.position="none")
+}
+plot_size_revision_wo_sam(size_revision)
+```
+
+### By move
+
+```{r size-type, cache=T, echo=F, warning=F}
+size_type <- results %>%
+  pivot_longer(cols=mem:lgg, names_to="type", values_to="bf") %>%
+  mutate (bits = log2(pmax(bf,1)),
+          move = factor(move),
+          type = factor(type, levels=c("stp", "gen", "lgg", "del", "com", "rec", "var", "mem", "reg", "sam"), labels=c("stop", "generalize", "anti-unify", "delete", "compose", "recurse", "variablize", "memorize", "regenerate", "sample" )))
+```
+
+```{r plot-size-type, dependson=c("size-type"), echo=F, warning=F, out.width="100%", fig.height=14, fig.width=14, fig.align='center', fig.show='hold', fig.cap="Search space size measured in bits (y-axis) by step (x-axis) by move (subplots). You can also see the raw data (scatter), the density (violin), the empirical mean (center of boxplot), bootstrapped 95% CI (hinges on boxplot), and empirical 95% HDI (whiskers of boxplot). I realize this is an abuse of the boxplot :-)"}
+plot_size_type <- function(data) {
+  cis <- data %>% group_by(move, type) %>% tidyboot_mean(column=bits, nboot=500)
+  hdi <- data %>% group_by(move, type) %>%
+    dplyr::summarize(hdi_lower = HPDinterval(as.mcmc(bits), prob=0.95)[[1]],
+                     hdi_upper = HPDinterval(as.mcmc(bits), prob=0.95)[[2]],
+                     mu = mean(bits))
+  stats <- left_join(cis, hdi, by=c("move", "type"))
+  ggplot(data, aes(x=move, group=move, y=bits)) +
+    facet_wrap(~type, ncol=2) +
+    geom_violin(aes(color=move)) +
+    geom_jitter(aes(color=move), alpha = 0.3, width=0.2) +
+    geom_boxplot(data=stats, mapping=aes(y=empirical_stat, ymax=hdi_upper, ymin=hdi_lower, middle=empirical_stat, lower=ci_lower, upper=ci_upper, color=move), alpha=0, width=0.5, stat="identity", outlier.shape=NA) +
+    ylab("Step complexity (bits)") +
+    xlab("Step") +
+    theme(legend.position="none")
+}
+plot_size_type(size_type)
+```
+
+### By problem
+
+```{r size-problem, cache=T, echo=F, warning=F}
+size_problem <- results %>%
+  group_by(run, problem) %>%
+  mutate (total = mem + del + stp + gen + com + rec + var + reg + sam + lgg,
+          total_wo_sam = total - sam,
+          lg_total = log2(total),
+          lg_total_wo_sam = log2(total_wo_sam)) %>%
+  dplyr::summarize(bits_overall = sum(lg_total),
+                   bits_wo_sam = sum(lg_total_wo_sam))
+```
+
+```{r plot-size-problem, dependson=c("size-problem"), echo=F, warning=F, out.width="100%", fig.height=7, fig.width=21, fig.align='center', fig.show='hold', fig.cap="**top:** Search space size measured in bits (y-axis) for each problem (x-axis). You can also see the raw data (scatter), the density (violin), the empirical mean (center of boxplot), bootstrapped 95% CI (hinges on boxplot), and empirical 95% HDI (whiskers of boxplot). I realize this is an abuse of the boxplot :-) **bottom:** Same as top but without sampling to see impact of other moves more clearly."}
+plot_size_problem <- function(data) {
+  cis <- data %>% group_by(problem) %>% tidyboot_mean(column=bits_overall, nboot=500)
+  hdi <- data %>% group_by(problem) %>%
+    dplyr::summarize(hdi_lower = HPDinterval(as.mcmc(bits_overall), prob=0.95)[[1]],
+                     hdi_upper = HPDinterval(as.mcmc(bits_overall), prob=0.95)[[2]],
+                     mu = mean(bits_overall))
+  stats <- left_join(cis, hdi, by=c("problem"))
+  ggplot(data, aes(x=problem, group=problem, y=bits_overall)) +
+    geom_violin(aes(color=problem)) +
+    geom_jitter(aes(color=problem), alpha = 0.3, width=0.2) +
+    geom_boxplot(data=stats, mapping=aes(y=empirical_stat, ymax=hdi_upper, ymin=hdi_lower, middle=empirical_stat, lower=ci_lower, upper=ci_upper, color=problem), alpha=0, width=0.5, stat="identity", outlier.shape=NA) +
+    ylab("Search complexity (bits)") +
+    xlab("Problem") +
+    theme(legend.position="none") +
+    theme(axis.text.x = element_text(size=12, angle = 90, hjust = 1))
+}
+plot_size_problem(size_problem)
+
+plot_size_problem_wo_sam <- function(data) {
+  cis <- data %>% group_by(problem) %>% tidyboot_mean(column=bits_wo_sam, nboot=500)
+  hdi <- data %>% group_by(problem) %>%
+    dplyr::summarize(hdi_lower = HPDinterval(as.mcmc(bits_wo_sam), prob=0.95)[[1]],
+                     hdi_upper = HPDinterval(as.mcmc(bits_wo_sam), prob=0.95)[[2]],
+                     mu = mean(bits_wo_sam))
+  stats <- left_join(cis, hdi, by=c("problem"))
+  ggplot(data, aes(x=problem, group=problem, y=bits_wo_sam)) +
+    geom_violin(aes(color=problem)) +
+    geom_jitter(aes(color=problem), alpha = 0.3, width=0.2) +
+    geom_boxplot(data=stats, mapping=aes(y=empirical_stat, ymax=hdi_upper, ymin=hdi_lower, middle=empirical_stat, lower=ci_lower, upper=ci_upper, color=problem), alpha=0, width=0.5, stat="identity", outlier.shape=NA) +
+    ylab("Search complexity (bits)") +
+    xlab("Problem") +
+    theme(legend.position="none") +
+    theme(axis.text.x = element_text(size=12, angle = 90, hjust = 1))
+}
+plot_size_problem_wo_sam(size_problem)
+```
+
+## Discussion/Conclusion
+
+My main takeaway:
+
+**Most moves have reasonably small complexities, so MCTS seems like a valid approach provided we can compartmentalize the complexity of sampling and regeneration.**
+
+One way to compartmentalize these two moves is by explicitly representing each random choice in the search tree. Because the first thing we have to do for a step is choose a move, this partitions each move into separate subtrees rather than presenting all possible outcomes of all moves in one flat list. It then also adds subtrees for each random choice required to fully parameterize each move and complete a step. By putting all these choices in the tree explicitly, we can quickly learn to ignore large parts of the space that aren't useful.
+
+For now, I think exploring ways to teach search to ignore sampling/regeneration is a better approach than getting rid of those moves entirely. We could get rid of them, but it isn't obvious how to do so, especially for sampling. It's currently the only way to generate responses during the first trial, because:
+
+1. The simulation starts with an empty TRS.
+2. Memorizing data and sampling are the only way to add rules to an empty TRS.
+3. During the first trial, there's no data to memorize.
+
+I could add a move that adds 1 of a few simple "default" rules:
+
+- `C x = x`
+- `C [] = []`
+- `C (Cons x y) = Cons x []`
+- `C (Cons x y) = y`
+- `C <first-input> = <first-input>` (i.e. for initial input `[1, 2, 3]`, give `C [1, 2, 3] = [1, 2, 3]`)
+
+While admittedly ad hoc, these seem like reasonable defaults, don't require search to later unlearn anything (i.e. we still start from an empty TRS), and memorizing one of these would then allow regeneration, etc. to start operating. This approach, however, makes search incomplete&mdash;there are now lots of rules we can't learn, namely those with a different type signature.
