@@ -2,10 +2,10 @@ import json
 import sys
 
 def ser_node(node, move, depth):
-    header = depth*"\t"
+    header = depth*"  "
     node_string = ser_unvisited(depth) if node is None else ser_visited(node, depth)
     spacer = "\t" if len(node_string) > 0 else ""
-    return f"{header}{move['move']}{spacer}{node_string}"
+    return f"{header}- {move['move']}{spacer}{node_string}"
 
 def ser_unvisited(depth):
     return ""

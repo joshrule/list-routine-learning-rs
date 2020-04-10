@@ -51,6 +51,6 @@ echo "- number of jobs: $4" >> $OUTDIR/readme.Rmd
 cat ./simulation_analysis.Rmd >> $OUTDIR/readme.Rmd
 
 # Run the tests.
-parallel --joblog $OUTDIR/job.txt --jobs=$4 "RUST_BACKTRACE=full cargo run --release --bin simulation -- $1 {1} &> $OUTDIR/{=1 s:\/:\.:g; =}_{2}.log" ::: $(cat $2) ::: $(seq -w 0 `expr $3 - 1`)
+parallel --joblog $OUTDIR/job.txt --jobs=$4 "RUST_BACKTRACE=full cargo run --release --bin simulation -- $1 {1} $OUTDIR/{=1 s:\/:\.:g; =}_{2}.json &> $OUTDIR/{=1 s:\/:\.:g; =}_{2}.log" ::: $(cat $2) ::: $(seq -w 0 `expr $3 - 1`)
 # DEBUG
-# parallel --joblog $OUTDIR/job.txt --jobs=$4 "echo RUST_BACKTRACE=full cargo run --release --bin simulation -- $1 {1} &> $OUTDIR/{=1 s:\/:\.:g; =}_{2}.log" ::: $(cat $2) ::: $(seq -w 0 `expr $3 - 1`)
+# parallel --joblog $OUTDIR/job.txt --jobs=$4 "echo RUST_BACKTRACE=full cargo run --release --bin simulation -- $1 {1} $OUTDIR/{=1 s:\/:\.:g; =}_{2}.json &> $OUTDIR/{=1 s:\/:\.:g; =}_{2}.log" ::: $(cat $2) ::: $(seq -w 0 `expr $3 - 1`)

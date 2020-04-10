@@ -81,6 +81,7 @@ pub fn load_trs<'a, 'b>(
 pub struct Args {
     pub arg_args_file: String,
     pub arg_problem_dir: String,
+    pub arg_out_file: String,
 }
 
 #[derive(Deserialize)]

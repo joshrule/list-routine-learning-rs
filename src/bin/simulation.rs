@@ -30,7 +30,7 @@ type Predictions = Vec<Prediction>;
 fn main() {
     let start = Instant::now();
     let rng = &mut thread_rng();
-    let (mut params, problem_dir) = exit_err(load_args(), "Failed to load parameters");
+    let (mut params, problem_dir, out_file) = exit_err(load_args(), "Failed to load parameters");
     notice("loaded parameters", 0);
 
     let mut lex = exit_err(load_lexicon(&problem_dir), "Failed to load lexicon");
@@ -73,6 +73,7 @@ fn main() {
             &data[..params.simulation.n_predictions],
             &mut predictions,
             &mut params,
+            &out_file,
             rng,
         ),
         "search failed",
@@ -97,12 +98,18 @@ fn report_results(search_time: f64, total_time: f64, predictions: &[Prediction])
     }
 }
 
-fn load_args() -> Result<(Params, String), String> {
-    let args: Args = Docopt::new("Usage: sim <args-file> <problem-dir>")
+fn load_args() -> Result<(Params, String, String), String> {
+    let args: Args = Docopt::new("Usage: sim <args-file> <problem-dir> <out-file>")
         .and_then(|d| d.deserialize())
         .unwrap_or_else(|e| e.exit());
     let toml_string = path_to_string(".", &args.arg_args_file)?;
-    str_err(toml::from_str(&toml_string).map(|toml| (toml, args.arg_problem_dir.clone())))
+    str_err(toml::from_str(&toml_string).map(|toml| {
+        (
+            toml,
+            args.arg_problem_dir.clone(),
+            args.arg_out_file.clone(),
+        )
+    }))
 }
 
 fn load_data(problem_dir: &str) -> Result<Vec<Datum>, String> {
@@ -200,6 +207,7 @@ fn search<'a, 'b, R: Rng>(
     data: &[Rule],
     predictions: &mut Predictions,
     params: &mut Params,
+    out_file: &str,
     rng: &mut R,
 ) -> Result<f64, String> {
     notice("making manager", 1);
@@ -247,7 +255,7 @@ fn search<'a, 'b, R: Rng>(
     }
     manager
         .tree()
-        .to_file("tree.json")
+        .to_file(out_file)
         .map_err(|_| "Record failed")?;
     Ok(search_time)
 }
