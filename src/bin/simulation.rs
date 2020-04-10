@@ -247,7 +247,7 @@ fn search<'a, 'b, R: Rng>(
     }
     manager
         .tree()
-        .to_record("tree.json")
+        .to_file("tree.json")
         .map_err(|_| "Record failed")?;
     Ok(search_time)
 }
