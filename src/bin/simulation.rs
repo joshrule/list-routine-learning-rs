@@ -13,8 +13,8 @@ use itertools::Itertools;
 use list_routine_learning_rs::*;
 use programinduction::{
     trs::{
-        mcts::{MCTSMoveEvaluator, MCTSStateEvaluator, TRSMCTS},
-        Hypothesis, Lexicon, TRS,
+        mcts::{MCTSModel, MCTSObj, MCTSStateEvaluator, ThompsonMoveEvaluator, TRSMCTS},
+        Datum as TRSDatum, Hypothesis, Lexicon, TRS,
     },
     MCTSManager,
 };
@@ -26,6 +26,7 @@ use term_rewriting::{trace::Trace, Operator, Rule, Term};
 
 type Prediction = (usize, usize, String);
 type Predictions = Vec<Prediction>;
+type Hyp<'a, 'b> = Hypothesis<MCTSObj<'a, 'b>, TRSDatum, MCTSModel<'a, 'b>>;
 
 fn main() {
     let start = Instant::now();
@@ -135,23 +136,27 @@ pub fn logsumexp(lps: &[f64]) -> f64 {
 
 #[allow(clippy::too_many_arguments)]
 fn process_prediction(
-    data: &[Rule],
-    seen: &[Hypothesis],
+    data: &[TRSDatum],
+    seen: &[Hyp],
     params: &Params,
     predictions: &mut Predictions,
 ) -> bool {
     let n_data = data.len() - 1;
     let n_seen = seen.len();
-    let input = &data[n_data].lhs;
-    let output = &data[n_data].rhs[0];
-    let trs = best_so_far(seen);
-    let prediction = make_prediction(trs, input, params);
-    let correct = prediction == *output;
-    predictions.push((correct as usize, n_seen, trs.to_string()));
-    correct
+    if let TRSDatum::Full(ref rule) = &data[n_data] {
+        let input = &rule.lhs;
+        let output = &rule.rhs[0];
+        let trs = best_so_far(seen);
+        let prediction = make_prediction(trs, input, params);
+        let correct = prediction == *output;
+        predictions.push((correct as usize, n_seen, trs.to_string()));
+        correct
+    } else {
+        panic!("passed in partial as final datum");
+    }
 }
 
-fn best_so_far<'a, 'b, 'c>(pop: &'c [Hypothesis<'a, 'b>]) -> &'c TRS<'a, 'b> {
+fn best_so_far<'a, 'b, 'c>(pop: &'c [Hyp<'a, 'b>]) -> &'c TRS<'a, 'b> {
     &pop.iter()
         .max_by(|x, y| {
             x.lposterior
@@ -160,6 +165,7 @@ fn best_so_far<'a, 'b, 'c>(pop: &'c [Hypothesis<'a, 'b>]) -> &'c TRS<'a, 'b> {
                 .unwrap()
         })
         .unwrap()
+        .object
         .trs
 }
 
@@ -211,21 +217,28 @@ fn search<'a, 'b, R: Rng>(
     rng: &mut R,
 ) -> Result<f64, String> {
     notice("making manager", 1);
-    let mut manager = make_manager(lex, background, params, &[], Some(&data[0].lhs), rng);
+    let mut manager = make_manager(lex, background, params, &[], rng);
     let mut timeout = params.simulation.timeout;
     let mut search_time = 0.0;
     let mut n_seen = 0;
+    let trs_data = (0..data.len())
+        .map(|n_data| {
+            let mut cd = (0..n_data)
+                .map(|idx| TRSDatum::Full(data[idx].clone()))
+                .collect_vec();
+            cd.push(TRSDatum::Partial(data[n_data].lhs.clone()));
+            cd
+        })
+        .collect_vec();
     notice("n,trial,nlposterior,trs", 1);
     for n_data in 0..data.len() {
         notice(format!("n_data: {}", n_data), 0);
-        if n_data > 0 {
-            update_data(&mut manager, &data[..n_data], Some(&data[n_data].lhs));
-        }
+        update_data(&mut manager, &trs_data[n_data]);
         let now = Instant::now();
         manager.step_until(rng, |_| now.elapsed().as_secs_f64() > (timeout as f64));
         search_time += now.elapsed().as_secs_f64();
         for h in manager.tree().mcts().hypotheses.iter().skip(n_seen) {
-            let h_str = h.trs.to_string();
+            let h_str = h.object.trs.to_string();
             let lpost = h.lposterior;
             notice_flat(
                 format!("{},{},{:.4},{:?}", n_seen, n_data + 1, lpost, h_str),
@@ -245,60 +258,61 @@ fn search<'a, 'b, R: Rng>(
         // Make a prediction.
         notice("making prediction", 0);
         let trss = &manager.tree().mcts().hypotheses;
-        let correct = process_prediction(&data[..=n_data], trss, params, predictions);
+        let prediction_data = (0..=n_data)
+            .map(|idx| TRSDatum::Full(data[idx].clone()))
+            .collect_vec();
+        let correct = process_prediction(&prediction_data, trss, params, predictions);
         update_timeout(
             correct,
             &mut timeout,
             params.simulation.timeout,
             params.simulation.confidence,
         );
+        if n_data == data.len() - 1 {
+            manager
+                .tree()
+                .to_file(out_file)
+                .map_err(|_| "Record failed")?;
+        }
     }
-    manager
-        .tree()
-        .to_file(out_file)
-        .map_err(|_| "Record failed")?;
     Ok(search_time)
 }
 
-fn update_data<'a, 'b>(
-    manager: &mut MCTSManager<TRSMCTS<'a, 'b>>,
-    data: &'a [Rule],
-    input: Option<&'a Term>,
-) {
+fn update_data<'a, 'b>(manager: &mut MCTSManager<TRSMCTS<'a, 'b>>, data: &'a [TRSDatum]) {
     notice("updating data", 1);
     // 0. Add the new data to the MCTS object.
     manager.tree_mut().mcts_mut().data = data;
-    manager.tree_mut().mcts_mut().input = input;
 
-    // 1. For each object in the object list, call change_data on the hypothesis.
-    notice("updating terminals", 2);
-    for hypothesis in manager.tree_mut().mcts_mut().hypotheses.iter_mut() {
-        hypothesis.change_data(data, input);
-        notice(
-            format!(
-                "{:.4}\t\"{}\"",
-                hypothesis.lposterior,
-                hypothesis.trs.to_string().lines().join(" ")
-            ),
-            3,
-        );
-    }
-    // 2. Copy the evaluation information to nodes from objects.
-    // 3. Iteratively update the Q values (the root Q is the sum over the child Qs).
-    notice("updating states", 2);
-    manager.tree_mut().reevaluate_states();
-
-    // 4. Add moves as needed.
+    // 1. Add moves as needed.
     notice("updating moves", 2);
     manager.tree_mut().update_moves();
+
+    notice("updating hypotheses", 2);
+    // 2. Update the MCTSObj.metas information.
+    // 3. Recompute the posterior for each hypothesis.
+    manager.tree_mut().mcts_mut().update_ps();
+
+    // 4. Update best.
+    manager.tree_mut().mcts_mut().best = manager
+        .tree()
+        .mcts()
+        .hypotheses
+        .iter()
+        .map(|h| h.lposterior)
+        .max_by(|x, y| x.partial_cmp(&y).or_else(|| Some(Ordering::Less)).unwrap())
+        .unwrap();
+
+    // 5. Copy the evaluation information to nodes from objects.
+    // 6. Iteratively update the Q values (the root Q is the sum over the child Qs).
+    notice("updating states", 2);
+    manager.tree_mut().reevaluate_states();
 }
 
 fn make_manager<'a, 'b, R: Rng>(
     lex: Lexicon<'b>,
     background: &'a [Rule],
     params: &Params,
-    data: &'a [Rule],
-    input: Option<&'a Term>,
+    data: &'a [TRSDatum],
     rng: &mut R,
 ) -> MCTSManager<TRSMCTS<'a, 'b>> {
     let mut mcts = TRSMCTS::new(
@@ -306,12 +320,11 @@ fn make_manager<'a, 'b, R: Rng>(
         background,
         params.simulation.deterministic,
         data,
-        input,
         params.model,
         params.mcts,
     );
     let state_eval = MCTSStateEvaluator;
-    let move_eval = MCTSMoveEvaluator;
+    let move_eval = ThompsonMoveEvaluator;
     let root = mcts.root();
     MCTSManager::new(mcts, root, state_eval, move_eval, rng)
 }
