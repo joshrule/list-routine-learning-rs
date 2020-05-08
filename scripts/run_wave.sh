@@ -48,7 +48,12 @@ echo "- [\`results\`](./results.csv)" >> $OUTDIR/readme.Rmd
 echo "- number of problems: $(wc -l $OUTDIR/problems.txt| awk '{print $1;}')" >> $OUTDIR/readme.Rmd
 echo "- number of runs: $3" >> $OUTDIR/readme.Rmd
 echo "- number of jobs: $4" >> $OUTDIR/readme.Rmd
-cat ./simulation_analysis.Rmd >> $OUTDIR/readme.Rmd
+echo "" >> $OUTDIR/readme.Rmd
+echo "```{r analysis, echo=F, warning=F, results='asis'}" >> $OUTDIR/readme.Rmd
+echo "data_dir <- "1583157552_2020-03-02-13-59-12"" >> $OUTDIR/readme.Rmd
+echo "res <- knitr::knit_child('../analysis.Rmd', quiet=T)" >> $OUTDIR/readme.Rmd
+echo "cat(res, sep = '\n')" >> $OUTDIR/readme.Rmd
+echo "```" >> $OUTDIR/readme.Rmd
 
 # Run the tests.
 parallel --joblog $OUTDIR/job.txt --jobs=$4 "RUST_BACKTRACE=full cargo run --release --bin simulation -- $1 {1} $OUTDIR/{=1 s:\/:\.:g; =}_{2}.json &> $OUTDIR/{=1 s:\/:\.:g; =}_{2}.log" ::: $(cat $2) ::: $(seq -w 0 `expr $3 - 1`)
