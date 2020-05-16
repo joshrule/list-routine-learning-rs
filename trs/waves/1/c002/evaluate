@@ -1,2 +1,0 @@
-# C xs = [16 25]
-C xs_ = (CONS (DECC (DIGIT 1) 6) (CONS (DECC (DIGIT 2) 5) NIL));

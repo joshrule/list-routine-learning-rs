@@ -1,3 +1,0 @@
-C(CONS(x_ y_)) = SINGLETON(x_);
-# # OR
-# C(CONS(x_ y_)) = CONS(x_ NIL);

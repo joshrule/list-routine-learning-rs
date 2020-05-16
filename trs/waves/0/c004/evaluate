@@ -1,5 +1,0 @@
-C(CONS(x_ y_)) = SINGLETON(COUNT(x_ y_));
-# # OR
-# C(x_) = SINGLETON(COUNT(HEAD(x_) TAIL(x_)));
-# C(CONS(x_ y_)) = CONS(COUNT(x_ y_) NIL);
-# C(x_) = CONS(COUNT(HEAD(x_) TAIL(x_)) NIL);

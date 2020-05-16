@@ -1,2 +1,0 @@
-# C xs = [37]
-C xs_ = (CONS (DECC (DIGIT 3) 7) NIL);

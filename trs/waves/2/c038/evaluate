@@ -1,4 +1,0 @@
-# C [] = []
-# C [x | xs] =  [x x | (C xs)]
-C NIL = NIL;
-C (CONS x_ xs_) = (CONS x_ (CONS x_ (C xs_)));

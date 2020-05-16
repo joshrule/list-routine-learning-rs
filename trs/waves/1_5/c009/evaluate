@@ -1,2 +1,0 @@
-# C [x | tail] = tail
-C xs_ = (TAIL xs_);

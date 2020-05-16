@@ -1,2 +1,0 @@
-# C [x y | xs] = [x 8 | xs]
-C (CONS x_ (CONS y_ xs_)) = (CONS x_ (CONS (DIGIT 8) xs_);

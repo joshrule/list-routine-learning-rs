@@ -1,2 +1,0 @@
-# C xs = [7 | xs]
-C xs_ = (CONS (DIGIT 7) xs_);
