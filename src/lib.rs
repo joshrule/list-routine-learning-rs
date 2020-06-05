@@ -4,8 +4,9 @@ use programinduction::trs::{
     mcts::MCTSParams, parse_lexicon, parse_rulecontexts, parse_rules, parse_trs, Lexicon,
     ModelParams, TRS,
 };
+use rand::Rng;
 use serde_derive::{Deserialize, Serialize};
-use std::{fs::read_to_string, path::PathBuf, process::exit};
+use std::{collections::BinaryHeap, fs::read_to_string, path::PathBuf, process::exit};
 use term_rewriting::{Operator, Rule, RuleContext, Term};
 
 pub fn start_section(s: &str) {
@@ -78,6 +79,71 @@ pub fn load_trs<'ctx, 'b>(
         deterministic,
         bg,
     ))
+}
+
+pub struct ReservoirItem<T> {
+    pub score: f64,
+    pub data: T,
+}
+
+pub struct Reservoir<T> {
+    data: BinaryHeap<ReservoirItem<T>>,
+    size: usize,
+}
+
+impl<T> ReservoirItem<T> {
+    pub fn new<R: Rng>(data: T, rng: &mut R) -> Self {
+        ReservoirItem {
+            data,
+            score: rng.gen(),
+        }
+    }
+}
+
+impl<T: Eq> PartialEq for ReservoirItem<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.score == other.score && self.data == other.data
+    }
+}
+
+impl<T: Eq> Eq for ReservoirItem<T> {}
+
+impl<T: Eq> PartialOrd for ReservoirItem<T> {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(
+            self.score
+                .partial_cmp(&other.score)
+                .unwrap_or(std::cmp::Ordering::Equal),
+        )
+    }
+}
+
+impl<T: Eq> Ord for ReservoirItem<T> {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.partial_cmp(&other).expect("ordering")
+    }
+}
+
+impl<T: Eq> Reservoir<T> {
+    pub fn with_capacity(n: usize) -> Self {
+        Reservoir {
+            data: BinaryHeap::with_capacity(n),
+            size: n,
+        }
+    }
+    pub fn add(&mut self, item: ReservoirItem<T>) {
+        if self.data.len() < self.size {
+            self.data.push(item);
+        } else if let Some(best) = self.data.peek() {
+            if item < *best {
+                self.data.pop();
+                self.data.push(item);
+            }
+        }
+    }
+    pub fn to_vec(self) -> Vec<ReservoirItem<T>> {
+        self.data.into_sorted_vec()
+    }
 }
 
 #[derive(Deserialize)]

@@ -269,9 +269,9 @@ fn search<'ctx, 'b, R: Rng>(
     let mut manager = make_manager(lex, background, params, &[], rng);
     let mut timeout = params.simulation.timeout;
     let mut n_seen = 0;
-    let mut all_fd = init_out_file(all_file)?;
     let mut prediction_fd = init_out_file(prediction_file)?;
     let mut best_fd = init_out_file(best_file)?;
+    let mut reservoir = Reservoir::with_capacity(10000);
     let trs_data = (0..data.len())
         .map(|n_data| {
             let mut cd = (0..n_data)
@@ -292,11 +292,12 @@ fn search<'ctx, 'b, R: Rng>(
             n_seen,
             &mut best_fd,
             &mut prediction_fd,
-            &mut all_fd,
+            &mut reservoir,
             problem,
             run,
             order,
             n_data + 1,
+            rng,
         )?;
         n_seen = manager.tree().mcts().hypotheses.len();
         // // Make a prediction.
@@ -319,19 +320,24 @@ fn search<'ctx, 'b, R: Rng>(
         //         .map_err(|_| "Record failed")?;
         // }
     }
+    let mut all_fd = init_out_file(all_file)?;
+    for item in reservoir.to_vec().into_iter().map(|item| item.data) {
+        str_err(writeln!(all_fd, "{}", item))?;
+    }
     Ok(manager.tree().mcts().search_time)
 }
 
-fn record_hypotheses(
+fn record_hypotheses<R: Rng>(
     hypotheses: &[Hyp],
     n: usize,
     best_fd: &mut std::fs::File,
     prediction_fd: &mut std::fs::File,
-    all_fd: &mut std::fs::File,
+    reservoir: &mut Reservoir<String>,
     problem: &str,
     run: usize,
     order: usize,
     trial: usize,
+    rng: &mut R,
 ) -> Result<(), String> {
     // best
     let i = if n == 0 {
@@ -376,16 +382,8 @@ fn record_hypotheses(
     ))?;
     // all
     for (i, h) in hypotheses.iter().enumerate().skip(n) {
-        str_err(record_hypothesis(
-            all_fd,
-            problem,
-            run,
-            order,
-            trial,
-            &h.object.trs,
-            h.object.time,
-            i,
-        ))?;
+        let h_str = hypothesis_string(problem, run, order, trial, &h.object.trs, h.object.time, i);
+        reservoir.add(ReservoirItem::new(h_str, rng));
     }
     Ok(())
 }
@@ -400,9 +398,24 @@ fn record_hypothesis(
     time: f64,
     count: usize,
 ) -> std::io::Result<()> {
-    let trs_str = trs.to_string().lines().join(" ");
     writeln!(
         f,
+        "{}",
+        hypothesis_string(problem, run, order, trial, trs, time, count)
+    )
+}
+
+fn hypothesis_string(
+    problem: &str,
+    run: usize,
+    order: usize,
+    trial: usize,
+    trs: &TRS,
+    time: f64,
+    count: usize,
+) -> String {
+    let trs_str = trs.to_string().lines().join(" ");
+    format!(
         "\"{}\",{},{},{},{},{},\"{}\"",
         problem, run, order, trial, time, count, trs_str
     )
