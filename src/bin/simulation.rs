@@ -258,7 +258,7 @@ fn search<'ctx, 'b, R: Rng>(
     data: &'b [Rule],
     predictions: &mut Predictions,
     params: &mut Params,
-    out_file: &str,
+    _out_file: &str,
     best_file: &str,
     prediction_file: &str,
     all_file: &str,
@@ -281,23 +281,12 @@ fn search<'ctx, 'b, R: Rng>(
             cd
         })
         .collect_vec();
-    // notice("n,trial,nlposterior,trs", 1);
     for n_data in 0..data.len() {
-        // notice(format!("n_data: {}", n_data), 0);
         update_data(&mut manager, &trs_data[n_data], rng);
         let now = Instant::now();
         manager.tree_mut().mcts_mut().start_trial();
         manager.step_until(rng, |_| now.elapsed().as_secs_f64() > (timeout as f64));
         manager.tree_mut().mcts_mut().finish_trial();
-        //for h in manager.tree().mcts().hypotheses.iter().skip(n_seen) {
-        //    let h_str = h.object.trs.to_string();
-        //    let lpost = h.lposterior;
-        //    notice_flat(
-        //        format!("{},{},{:.4},{:?}", n_seen, n_data + 1, lpost, h_str),
-        //        1,
-        //    );
-        //    n_seen += 1;
-        //}
         record_hypotheses(
             &manager.tree().mcts().hypotheses,
             n_seen,
@@ -311,7 +300,6 @@ fn search<'ctx, 'b, R: Rng>(
         )?;
         n_seen = manager.tree().mcts().hypotheses.len();
         // // Make a prediction.
-        // notice("making prediction", 0);
         let trss = &manager.tree().mcts().hypotheses;
         let prediction_data = (0..=n_data)
             .map(|idx| TRSDatum::Full(data[idx].clone()))
@@ -323,12 +311,13 @@ fn search<'ctx, 'b, R: Rng>(
             params.simulation.timeout,
             params.simulation.confidence,
         );
-        if n_data == data.len() - 1 {
-            manager
-                .tree()
-                .to_file(out_file)
-                .map_err(|_| "Record failed")?;
-        }
+        // NOTE: skipping for actual runs --- a disk hog.
+        // if n_data == data.len() - 1 {
+        //     manager
+        //         .tree()
+        //         .to_file(out_file)
+        //         .map_err(|_| "Record failed")?;
+        // }
     }
     Ok(manager.tree().mcts().search_time)
 }
