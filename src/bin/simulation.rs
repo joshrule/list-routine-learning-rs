@@ -11,6 +11,7 @@
 use docopt::Docopt;
 use itertools::Itertools;
 use list_routine_learning_rs::*;
+use polytype::atype::with_ctx;
 use programinduction::{
     trs::{
         mcts::{MCTSModel, MCTSObj, MCTSStateEvaluator, ThompsonMoveEvaluator, TRSMCTS},
@@ -19,8 +20,16 @@ use programinduction::{
     MCTSManager,
 };
 use rand::{seq::SliceRandom, thread_rng, Rng};
+use regex::Regex;
 use std::{
-    cmp::Ordering, f64, fs::File, io::BufReader, path::PathBuf, process::exit, str, time::Instant,
+    cmp::Ordering,
+    f64,
+    fs::File,
+    io::{BufReader, Write},
+    path::PathBuf,
+    process::exit,
+    str,
+    time::Instant,
 };
 use term_rewriting::{trace::Trace, Operator, Rule, Term};
 
@@ -29,59 +38,82 @@ type Predictions = Vec<Prediction>;
 type Hyp<'a, 'b> = Hypothesis<MCTSObj<'a, 'b>, TRSDatum, MCTSModel<'a, 'b>>;
 
 fn main() {
-    let start = Instant::now();
-    let rng = &mut thread_rng();
-    let (mut params, problem_dir, out_file) = exit_err(load_args(), "Failed to load parameters");
-    notice("loaded parameters", 0);
+    with_ctx(4096, |ctx| {
+        let start = Instant::now();
+        let rng = &mut thread_rng();
+        let (
+            mut params,
+            run,
+            problem_filename,
+            best_filename,
+            prediction_filename,
+            all_filename,
+            out_filename,
+        ) = exit_err(load_args(), "Failed to load parameters");
+        notice("loaded parameters", 0);
 
-    let mut lex = exit_err(load_lexicon(&problem_dir), "Failed to load lexicon");
-    notice("loaded lexicon", 0);
-    notice(&lex, 1);
+        let order_regex = exit_err(str_err(Regex::new(r".+_(\d+).json")), "can't compile regex");
+        let order = order_regex.captures(&problem_filename).expect("captures")[1]
+            .parse::<usize>()
+            .expect("order");
 
-    let background = exit_err(
-        load_rules(&problem_dir, &mut lex),
-        "Failed to load background",
-    );
-    notice("loaded background", 0);
+        let mut lex = exit_err(
+            load_lexicon(&ctx, &params.simulation.signature),
+            "Failed to load lexicon",
+        );
+        notice("loaded lexicon", 0);
+        notice(&lex, 1);
 
-    let c = exit_err(identify_concept(&lex), "No target concept");
-    let mut examples = exit_err(load_data(&problem_dir), "Problem loading data");
-    examples.shuffle(rng);
-    let data: Vec<_> = examples
-        .iter()
-        .map(|e| e.to_rule(&lex, c))
-        .collect::<Result<Vec<_>, _>>()
-        .unwrap_or_else(|_| {
-            eprintln!("Data conversion failed.");
-            exit(1);
-        });
-    notice("loaded data", 0);
-    notice(
-        examples
+        let background = exit_err(
+            load_rules(&params.simulation.background, &mut lex),
+            "Failed to load background",
+        );
+        notice("loaded background", 0);
+
+        let c = exit_err(identify_concept(&lex), "No target concept");
+        let (mut examples, problem) =
+            exit_err(load_problem(&problem_filename), "Problem loading data");
+        examples.shuffle(rng);
+        let data: Vec<_> = examples
             .iter()
-            .take(params.simulation.n_predictions)
-            .map(|e| format!("{:?}", e))
-            .join("\n"),
-        1,
-    );
+            .map(|e| e.to_rule(&lex, c))
+            .collect::<Result<Vec<_>, _>>()
+            .unwrap_or_else(|_| {
+                eprintln!("Data conversion failed.");
+                exit(1);
+            });
+        notice("loaded data", 0);
+        notice(
+            examples
+                .iter()
+                .take(params.simulation.n_predictions)
+                .map(|e| format!("{:?}", e))
+                .join("\n"),
+            1,
+        );
 
-    notice("searching", 0);
-    let mut predictions = Vec::with_capacity(data.len());
-    let search_time = exit_err(
-        search(
-            lex,
-            &background,
-            &data[..params.simulation.n_predictions],
-            &mut predictions,
-            &mut params,
-            &out_file,
-            rng,
-        ),
-        "search failed",
-    );
+        notice("searching", 0);
+        let mut predictions = Vec::with_capacity(data.len());
+        let search_time = exit_err(
+            search(
+                lex,
+                &background,
+                &data[..params.simulation.n_predictions],
+                &mut predictions,
+                &mut params,
+                &out_filename,
+                &best_filename,
+                &prediction_filename,
+                &all_filename,
+                (&problem, run, order),
+                rng,
+            ),
+            "search failed",
+        );
 
-    let elapsed = start.elapsed().as_secs_f64();
-    report_results(search_time, elapsed, &predictions);
+        let elapsed = start.elapsed().as_secs_f64();
+        report_results(search_time, elapsed, &predictions);
+    })
 }
 
 fn report_results(search_time: f64, total_time: f64, predictions: &[Prediction]) {
@@ -99,31 +131,36 @@ fn report_results(search_time: f64, total_time: f64, predictions: &[Prediction])
     }
 }
 
-fn load_args() -> Result<(Params, String, String), String> {
-    let args: Args = Docopt::new("Usage: sim <args-file> <problem-dir> <out-file>")
-        .and_then(|d| d.deserialize())
-        .unwrap_or_else(|e| e.exit());
-    let toml_string = path_to_string(".", &args.arg_args_file)?;
+fn load_args() -> Result<(Params, usize, String, String, String, String, String), String> {
+    let args: Args =
+        Docopt::new("Usage: sim <params> <run> <data> <best> <prediction> <all> <out>")
+            .and_then(|d| d.deserialize())
+            .unwrap_or_else(|e| e.exit());
+    let toml_string = path_to_string(".", &args.arg_params)?;
     str_err(toml::from_str(&toml_string).map(|toml| {
         (
             toml,
-            args.arg_problem_dir.clone(),
-            args.arg_out_file.clone(),
+            args.arg_run,
+            args.arg_data.clone(),
+            args.arg_best.clone(),
+            args.arg_prediction.clone(),
+            args.arg_all.clone(),
+            args.arg_out.clone(),
         )
     }))
 }
 
-fn load_data(problem_dir: &str) -> Result<Vec<Datum>, String> {
-    let path: PathBuf = [problem_dir, "stimuli.json"].iter().collect();
+fn load_problem(data_filename: &str) -> Result<(Vec<Datum>, String), String> {
+    let path: PathBuf = PathBuf::from(data_filename);
     let file = str_err(File::open(path))?;
     let reader = BufReader::new(file);
-    let data: Vec<Datum> = str_err(serde_json::from_reader(reader))?;
-    Ok(data)
+    let problem: Problem = str_err(serde_json::from_reader(reader))?;
+    Ok((problem.data, problem.id))
 }
 
 fn identify_concept(lex: &Lexicon) -> Result<Operator, String> {
     str_err(
-        lex.has_op(Some("C"), 0)
+        lex.has_operator(Some("C"), 0)
             .or_else(|_| Err(String::from("No target concept"))),
     )
 }
@@ -156,71 +193,85 @@ fn process_prediction(
     }
 }
 
-fn best_so_far<'a, 'b, 'c>(pop: &'c [Hyp<'a, 'b>]) -> &'c TRS<'a, 'b> {
-    &pop.iter()
-        .max_by(|x, y| {
+fn best_so_far_pair<'a, 'b, 'c>(pop: &'c [Hyp<'a, 'b>]) -> (usize, &'c Hyp<'a, 'b>) {
+    pop.iter()
+        .enumerate()
+        .max_by(|(_, x), (_, y)| {
             x.lposterior
                 .partial_cmp(&y.lposterior)
                 .or_else(|| Some(Ordering::Less))
                 .unwrap()
         })
         .unwrap()
-        .object
-        .trs
+}
+
+fn best_so_far<'a, 'b, 'c>(pop: &'c [Hyp<'a, 'b>]) -> &'c TRS<'a, 'b> {
+    &best_so_far_pair(pop).1.object.trs
 }
 
 fn make_prediction<'a, 'b>(trs: &TRS<'a, 'b>, input: &Term, params: &Params) -> Term {
     let utrs = trs.full_utrs();
     let lex = trs.lexicon();
     let sig = lex.signature();
-    let mut trace = Trace::new(
+    let trace = Trace::new(
         &utrs,
         sig,
         input,
         params.model.likelihood.p_observe,
+        params.model.likelihood.max_steps,
         params.model.likelihood.max_size,
-        params.model.likelihood.max_depth,
         params.model.likelihood.strategy,
     );
-    trace.rewrite(params.model.likelihood.max_steps);
-    trace
-        .root()
+    let best = trace
         .iter()
         .max_by(|n1, n2| {
-            n1.log_p()
-                .partial_cmp(&n2.log_p())
+            trace[*n1]
+                .log_p()
+                .partial_cmp(&trace[*n2].log_p())
                 .or(Some(Ordering::Less))
                 .unwrap()
         })
-        .unwrap()
-        .term()
+        .unwrap();
+    trace[best].term().clone()
 }
 
 fn update_timeout(correct: bool, timeout: &mut usize, ceiling: usize, scale: f64) {
     if !correct && *timeout == ceiling {
-        notice(format!("timeout remains at ceiling of {}s", timeout), 1);
+        //notice(format!("timeout remains at ceiling of {}s", timeout), 1);
         return;
     }
-    let change = if correct { "de" } else { "in" };
+    // let change = if correct { "de" } else { "in" };
     let factor = if correct { scale } else { scale.recip() };
     *timeout = ((*timeout as f64) * factor).ceil().min(ceiling as f64) as usize;
-    notice(format!("timeout {}creased to {}s", change, timeout), 1);
+    // notice(format!("timeout {}creased to {}s", change, timeout), 1);
 }
 
-fn search<'a, 'b, R: Rng>(
-    lex: Lexicon<'b>,
-    background: &[Rule],
-    data: &[Rule],
+fn init_out_file(filename: &str) -> Result<std::fs::File, String> {
+    let mut fd = str_err(std::fs::File::create(filename))?;
+    str_err(writeln!(fd, "problem,run,order,trial,time,count,trs"))?;
+    Ok(fd)
+}
+
+fn search<'ctx, 'b, R: Rng>(
+    lex: Lexicon<'ctx, 'b>,
+    background: &'b [Rule],
+    data: &'b [Rule],
     predictions: &mut Predictions,
     params: &mut Params,
     out_file: &str,
+    best_file: &str,
+    prediction_file: &str,
+    all_file: &str,
+    (problem, run, order): (&str, usize, usize),
     rng: &mut R,
 ) -> Result<f64, String> {
-    notice("making manager", 1);
+    // notice("making manager", 1);
     let mut manager = make_manager(lex, background, params, &[], rng);
     let mut timeout = params.simulation.timeout;
-    let mut search_time = 0.0;
     let mut n_seen = 0;
+    let mut all_fd = init_out_file(all_file)?;
+    let mut prediction_fd = init_out_file(prediction_file)?;
+    let mut best_fd = init_out_file(best_file)?;
     let trs_data = (0..data.len())
         .map(|n_data| {
             let mut cd = (0..n_data)
@@ -230,33 +281,37 @@ fn search<'a, 'b, R: Rng>(
             cd
         })
         .collect_vec();
-    notice("n,trial,nlposterior,trs", 1);
+    // notice("n,trial,nlposterior,trs", 1);
     for n_data in 0..data.len() {
-        notice(format!("n_data: {}", n_data), 0);
-        update_data(&mut manager, &trs_data[n_data]);
+        // notice(format!("n_data: {}", n_data), 0);
+        update_data(&mut manager, &trs_data[n_data], rng);
         let now = Instant::now();
+        manager.tree_mut().mcts_mut().start_trial();
         manager.step_until(rng, |_| now.elapsed().as_secs_f64() > (timeout as f64));
-        search_time += now.elapsed().as_secs_f64();
-        for h in manager.tree().mcts().hypotheses.iter().skip(n_seen) {
-            let h_str = h.object.trs.to_string();
-            let lpost = h.lposterior;
-            notice_flat(
-                format!("{},{},{:.4},{:?}", n_seen, n_data + 1, lpost, h_str),
-                1,
-            );
-            n_seen += 1;
-        }
-        notice(format!("search_time: {:.4}", search_time), 0);
-        notice(
-            format!("revisions: {}", manager.tree().mcts().revisions.len()),
-            0,
-        );
-        notice(
-            format!("terminals: {}", manager.tree().mcts().terminals.len()),
-            0,
-        );
-        // Make a prediction.
-        notice("making prediction", 0);
+        manager.tree_mut().mcts_mut().finish_trial();
+        //for h in manager.tree().mcts().hypotheses.iter().skip(n_seen) {
+        //    let h_str = h.object.trs.to_string();
+        //    let lpost = h.lposterior;
+        //    notice_flat(
+        //        format!("{},{},{:.4},{:?}", n_seen, n_data + 1, lpost, h_str),
+        //        1,
+        //    );
+        //    n_seen += 1;
+        //}
+        record_hypotheses(
+            &manager.tree().mcts().hypotheses,
+            n_seen,
+            &mut best_fd,
+            &mut prediction_fd,
+            &mut all_fd,
+            problem,
+            run,
+            order,
+            n_data + 1,
+        )?;
+        n_seen = manager.tree().mcts().hypotheses.len();
+        // // Make a prediction.
+        // notice("making prediction", 0);
         let trss = &manager.tree().mcts().hypotheses;
         let prediction_data = (0..=n_data)
             .map(|idx| TRSDatum::Full(data[idx].clone()))
@@ -275,50 +330,132 @@ fn search<'a, 'b, R: Rng>(
                 .map_err(|_| "Record failed")?;
         }
     }
-    Ok(search_time)
+    Ok(manager.tree().mcts().search_time)
 }
 
-fn update_data<'a, 'b>(manager: &mut MCTSManager<TRSMCTS<'a, 'b>>, data: &'a [TRSDatum]) {
-    notice("updating data", 1);
-    // 0. Add the new data to the MCTS object.
+fn record_hypotheses(
+    hypotheses: &[Hyp],
+    n: usize,
+    best_fd: &mut std::fs::File,
+    prediction_fd: &mut std::fs::File,
+    all_fd: &mut std::fs::File,
+    problem: &str,
+    run: usize,
+    order: usize,
+    trial: usize,
+) -> Result<(), String> {
+    // best
+    let i = if n == 0 {
+        0
+    } else {
+        best_so_far_pair(&hypotheses[..n]).0
+    };
+    let best = hypotheses
+        .iter()
+        .enumerate()
+        .skip(n)
+        .fold(vec![i], |mut acc, (i, h)| {
+            let top_scorer = acc.last().expect("top_score");
+            if hypotheses[*top_scorer].lposterior < h.lposterior {
+                acc.push(i);
+            }
+            acc
+        });
+    for &i in &best {
+        str_err(record_hypothesis(
+            best_fd,
+            problem,
+            run,
+            order,
+            trial,
+            &hypotheses[i].object.trs,
+            hypotheses[i].object.time,
+            i,
+        ))?;
+    }
+    // predictions
+    let i = best_so_far_pair(hypotheses).0;
+    str_err(record_hypothesis(
+        prediction_fd,
+        problem,
+        run,
+        order,
+        trial,
+        &hypotheses[i].object.trs,
+        hypotheses[i].object.time,
+        i,
+    ))?;
+    // all
+    for (i, h) in hypotheses.iter().enumerate().skip(n) {
+        str_err(record_hypothesis(
+            all_fd,
+            problem,
+            run,
+            order,
+            trial,
+            &h.object.trs,
+            h.object.time,
+            i,
+        ))?;
+    }
+    Ok(())
+}
+
+fn record_hypothesis(
+    f: &mut std::fs::File,
+    problem: &str,
+    run: usize,
+    order: usize,
+    trial: usize,
+    trs: &TRS,
+    time: f64,
+    count: usize,
+) -> std::io::Result<()> {
+    let trs_str = trs.to_string().lines().join(" ");
+    writeln!(
+        f,
+        "\"{}\",{},{},{},{},{},\"{}\"",
+        problem, run, order, trial, time, count, trs_str
+    )
+}
+
+fn update_data<'a, 'b, R: Rng>(
+    manager: &mut MCTSManager<TRSMCTS<'a, 'b>>,
+    data: &'b [TRSDatum],
+    rng: &mut R,
+) {
+    // 1. Update the known data.
+    // notice("updating data", 1);
     manager.tree_mut().mcts_mut().data = data;
 
-    // 1. Add moves as needed.
-    notice("updating moves", 2);
-    manager.tree_mut().update_moves();
+    // 2. Update the tree structure.
+    // notice("updating tree", 1);
+    manager.tree_mut().check_tree(rng);
 
-    notice("updating hypotheses", 2);
-    // 2. Update the MCTSObj.metas information.
-    // 3. Recompute the posterior for each hypothesis.
-    manager.tree_mut().mcts_mut().update_ps();
+    // 3. Update the hypotheses: recompute the posterior.
+    // notice("updating hypotheses", 1);
+    manager.tree_mut().mcts_mut().update_hypotheses();
 
-    // 4. Update best.
-    manager.tree_mut().mcts_mut().best = manager
-        .tree()
-        .mcts()
-        .hypotheses
-        .iter()
-        .map(|h| h.lposterior)
-        .max_by(|x, y| x.partial_cmp(&y).or_else(|| Some(Ordering::Less)).unwrap())
-        .unwrap();
-
-    // 5. Copy the evaluation information to nodes from objects.
-    // 6. Iteratively update the Q values (the root Q is the sum over the child Qs).
-    notice("updating states", 2);
+    // 4. Update the state evaluations.
+    //    - Copy the evaluation information to nodes from objects.
+    //    - Iteratively update the Q values (the root Q is the sum over the child Qs).
+    // notice("updating state evaluations", 1);
     manager.tree_mut().reevaluate_states();
 }
 
-fn make_manager<'a, 'b, R: Rng>(
-    lex: Lexicon<'b>,
-    background: &'a [Rule],
+fn make_manager<'ctx, 'b, R: Rng>(
+    lex: Lexicon<'ctx, 'b>,
+    background: &'b [Rule],
     params: &Params,
-    data: &'a [TRSDatum],
+    data: &'b [TRSDatum],
     rng: &mut R,
-) -> MCTSManager<TRSMCTS<'a, 'b>> {
+) -> MCTSManager<TRSMCTS<'ctx, 'b>> {
     let mut mcts = TRSMCTS::new(
         lex,
         background,
         params.simulation.deterministic,
+        params.simulation.lo,
+        params.simulation.hi,
         data,
         params.model,
         params.mcts,

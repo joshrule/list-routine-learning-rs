@@ -1,5 +1,5 @@
 use itertools::Itertools;
-use polytype::{ptp, tp, Context as TypeContext, TypeSchema};
+use polytype::atype::TypeContext;
 use programinduction::trs::{
     mcts::MCTSParams, parse_lexicon, parse_rulecontexts, parse_rules, parse_trs, Lexicon,
     ModelParams, TRS,
@@ -42,10 +42,13 @@ pub fn path_to_string(dir: &str, file: &str) -> Result<String, String> {
     str_err(read_to_string(path))
 }
 
-pub fn load_lexicon<'a>(problem_dir: &str) -> Result<Lexicon<'a>, String> {
+pub fn load_lexicon<'ctx, 'b>(
+    ctx: &TypeContext<'ctx>,
+    lex_filename: &str,
+) -> Result<Lexicon<'ctx, 'b>, String> {
     str_err(parse_lexicon(
-        &path_to_string(problem_dir, "signature")?,
-        TypeContext::default(),
+        &str_err(read_to_string(PathBuf::from(lex_filename)))?,
+        &ctx,
     ))
 }
 
@@ -56,19 +59,19 @@ pub fn load_rulecontexts(problem_dir: &str, lex: &mut Lexicon) -> Result<Vec<Rul
     ))
 }
 
-pub fn load_rules(problem_dir: &str, lex: &mut Lexicon) -> Result<Vec<Rule>, String> {
+pub fn load_rules(bg_filename: &str, lex: &mut Lexicon) -> Result<Vec<Rule>, String> {
     str_err(parse_rules(
-        &path_to_string(problem_dir, "background")?,
+        &str_err(read_to_string(PathBuf::from(bg_filename)))?,
         lex,
     ))
 }
 
-pub fn load_trs<'a, 'b>(
+pub fn load_trs<'ctx, 'b>(
     problem_dir: &str,
-    lex: &mut Lexicon<'b>,
+    lex: &mut Lexicon<'ctx, 'b>,
     deterministic: bool,
-    bg: &'a [Rule],
-) -> Result<TRS<'a, 'b>, String> {
+    bg: &'b [Rule],
+) -> Result<TRS<'ctx, 'b>, String> {
     str_err(parse_trs(
         &path_to_string(problem_dir, "evaluate")?,
         lex,
@@ -79,9 +82,13 @@ pub fn load_trs<'a, 'b>(
 
 #[derive(Deserialize)]
 pub struct Args {
-    pub arg_args_file: String,
-    pub arg_problem_dir: String,
-    pub arg_out_file: String,
+    pub arg_params: String,
+    pub arg_data: String,
+    pub arg_out: String,
+    pub arg_best: String,
+    pub arg_prediction: String,
+    pub arg_all: String,
+    pub arg_run: usize,
 }
 
 #[derive(Deserialize)]
@@ -97,6 +104,10 @@ pub struct SimulationParams {
     pub n_predictions: usize,
     pub confidence: f64,
     pub deterministic: bool,
+    pub lo: usize,
+    pub hi: usize,
+    pub signature: String,
+    pub background: String,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -105,6 +116,13 @@ pub struct Routine {
     pub tp: RoutineType,
     pub examples: Vec<Datum>,
     pub name: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct Problem {
+    pub id: String,
+    pub program: String,
+    pub data: Vec<Datum>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -140,15 +158,6 @@ pub enum IOType {
     #[serde(rename = "int")]
     Int,
 }
-impl From<IOType> for TypeSchema {
-    fn from(t: IOType) -> Self {
-        match t {
-            IOType::Bool => ptp!(bool),
-            IOType::Int => ptp!(int),
-            IOType::IntList => ptp!(list(tp!(int))),
-        }
-    }
-}
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(untagged)]
@@ -163,18 +172,18 @@ impl Value {
             Value::Int(x) => Value::num_to_term(lex, *x)?,
             Value::IntList(xs) => Value::list_to_term(lex, &xs)?,
             Value::Bool(true) => Term::Application {
-                op: lex.has_op(Some("true"), 0).map_err(|_| ())?,
+                op: lex.has_operator(Some("true"), 0).map_err(|_| ())?,
                 args: vec![],
             },
             Value::Bool(false) => Term::Application {
-                op: lex.has_op(Some("false"), 0).map_err(|_| ())?,
+                op: lex.has_operator(Some("false"), 0).map_err(|_| ())?,
                 args: vec![],
             },
         };
         if let Some(op) = lhs {
             let op_term = Term::Application { op, args: vec![] };
             Ok(Term::Application {
-                op: lex.has_op(Some("."), 2).map_err(|_| ())?,
+                op: lex.has_operator(Some("."), 2).map_err(|_| ())?,
                 args: vec![op_term, base_term],
             })
         } else {
@@ -187,9 +196,9 @@ impl Value {
             .map(|&x| Value::num_to_term(lex, x))
             .rev()
             .collect::<Result<Vec<_>, _>>()?;
-        let nil = lex.has_op(Some("NIL"), 0).map_err(|_| ())?;
-        let cons = lex.has_op(Some("CONS"), 0).map_err(|_| ())?;
-        let app = lex.has_op(Some("."), 2).map_err(|_| ())?;
+        let nil = lex.has_operator(Some("NIL"), 0).map_err(|_| ())?;
+        let cons = lex.has_operator(Some("CONS"), 0).map_err(|_| ())?;
+        let app = lex.has_operator(Some("."), 2).map_err(|_| ())?;
         let mut term = Term::Application {
             op: nil,
             args: vec![],
@@ -212,15 +221,15 @@ impl Value {
     }
     fn make_digit(lex: &Lexicon, n: usize) -> Result<Term, ()> {
         let digit_const = Term::Application {
-            op: lex.has_op(Some("DIGIT"), 0).map_err(|_| ())?,
+            op: lex.has_operator(Some("DIGIT"), 0).map_err(|_| ())?,
             args: vec![],
         };
         let num_const = Term::Application {
-            op: lex.has_op(Some(&n.to_string()), 0).map_err(|_| ())?,
+            op: lex.has_operator(Some(&n.to_string()), 0).map_err(|_| ())?,
             args: vec![],
         };
         Ok(Term::Application {
-            op: lex.has_op(Some("."), 2).map_err(|_| ())?,
+            op: lex.has_operator(Some("."), 2).map_err(|_| ())?,
             args: vec![digit_const, num_const],
         })
     }
@@ -228,9 +237,9 @@ impl Value {
         match num {
             0..=9 => Value::make_digit(lex, num),
             _ => {
-                let app = lex.has_op(Some("."), 2).map_err(|_| ())?;
+                let app = lex.has_operator(Some("."), 2).map_err(|_| ())?;
                 let decc_term = Term::Application {
-                    op: lex.has_op(Some("DECC"), 0).map_err(|_| ())?,
+                    op: lex.has_operator(Some("DECC"), 0).map_err(|_| ())?,
                     args: vec![],
                 };
                 let num_term = Value::num_to_term(lex, num / 10)?;
@@ -240,7 +249,7 @@ impl Value {
                 };
                 let digit_term = Term::Application {
                     op: lex
-                        .has_op(Some(&(num % 10).to_string()), 0)
+                        .has_operator(Some(&(num % 10).to_string()), 0)
                         .map_err(|_| ())?,
                     args: vec![],
                 };
