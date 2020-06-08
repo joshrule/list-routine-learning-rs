@@ -157,14 +157,14 @@ pub struct Args {
     pub arg_run: usize,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 pub struct Params {
     pub simulation: SimulationParams,
     pub mcts: MCTSParams,
     pub model: ModelParams,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct SimulationParams {
     pub timeout: usize,
     pub n_predictions: usize,

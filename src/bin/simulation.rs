@@ -19,7 +19,7 @@ use programinduction::{
     },
     MCTSManager,
 };
-use rand::{seq::SliceRandom, thread_rng, Rng};
+use rand::{thread_rng, Rng};
 use regex::Regex;
 use std::{
     cmp::Ordering,
@@ -42,13 +42,13 @@ fn main() {
         let start = Instant::now();
         let rng = &mut thread_rng();
         let (
-            mut params,
-            run,
+            params,
+            runs,
             problem_filename,
             best_filename,
             prediction_filename,
             all_filename,
-            out_filename,
+            _out_filename,
         ) = exit_err(load_args(), "Failed to load parameters");
         notice("loaded parameters", 0);
 
@@ -71,9 +71,7 @@ fn main() {
         notice("loaded background", 0);
 
         let c = exit_err(identify_concept(&lex), "No target concept");
-        let (mut examples, problem) =
-            exit_err(load_problem(&problem_filename), "Problem loading data");
-        examples.shuffle(rng);
+        let (examples, problem) = exit_err(load_problem(&problem_filename), "Problem loading data");
         let data: Vec<_> = examples
             .iter()
             .map(|e| e.to_rule(&lex, c))
@@ -93,42 +91,39 @@ fn main() {
         );
 
         notice("searching", 0);
-        let mut predictions = Vec::with_capacity(data.len());
-        let search_time = exit_err(
-            search(
-                lex,
-                &background,
-                &data[..params.simulation.n_predictions],
-                &mut predictions,
-                &mut params,
-                &out_filename,
-                &best_filename,
-                &prediction_filename,
-                &all_filename,
-                (&problem, run, order),
-                rng,
-            ),
-            "search failed",
-        );
-
-        let elapsed = start.elapsed().as_secs_f64();
-        report_results(search_time, elapsed, &predictions);
+        let mut prediction_fd = exit_err(init_out_file(&prediction_filename), "bad file");
+        let mut best_fd = exit_err(init_out_file(&best_filename), "bad file");
+        let mut reservoir = Reservoir::with_capacity(10000);
+        for run in 0..runs {
+            let mut predictions = Vec::with_capacity(data.len());
+            let search_time = exit_err(
+                search(
+                    lex.clone(),
+                    &background,
+                    &data[..params.simulation.n_predictions],
+                    &mut predictions,
+                    &mut params.clone(),
+                    &mut best_fd,
+                    &mut prediction_fd,
+                    &mut reservoir,
+                    (&problem, run, order),
+                    rng,
+                ),
+                "search failed",
+            );
+            let elapsed = start.elapsed().as_secs_f64();
+            report_time(search_time, elapsed);
+        }
+        let mut all_fd = exit_err(init_out_file(&all_filename), "bad file");
+        for item in reservoir.to_vec().into_iter().map(|item| item.data) {
+            exit_err(str_err(writeln!(all_fd, "{}", item)), "bad file");
+        }
     })
 }
 
-fn report_results(search_time: f64, total_time: f64, predictions: &[Prediction]) {
+fn report_time(search_time: f64, total_time: f64) {
     notice(format!("search time: {:.3e}s", search_time), 0);
     notice(format!("total time: {:.3e}s", total_time), 0);
-    println!("trial,accuracy,n_seen,program");
-    for (n, (accuracy, n_seen, program)) in predictions.iter().enumerate() {
-        println!(
-            "{},{},{},\"{}\"",
-            n + 1,
-            accuracy,
-            n_seen,
-            program.lines().join(" ")
-        );
-    }
 }
 
 fn load_args() -> Result<(Params, usize, String, String, String, String, String), String> {
@@ -258,20 +253,15 @@ fn search<'ctx, 'b, R: Rng>(
     data: &'b [Rule],
     predictions: &mut Predictions,
     params: &mut Params,
-    _out_file: &str,
-    best_file: &str,
-    prediction_file: &str,
-    all_file: &str,
+    best_fd: &mut std::fs::File,
+    prediction_fd: &mut std::fs::File,
+    reservoir: &mut Reservoir<String>,
     (problem, run, order): (&str, usize, usize),
     rng: &mut R,
 ) -> Result<f64, String> {
-    // notice("making manager", 1);
     let mut manager = make_manager(lex, background, params, &[], rng);
     let mut timeout = params.simulation.timeout;
     let mut n_seen = 0;
-    let mut prediction_fd = init_out_file(prediction_file)?;
-    let mut best_fd = init_out_file(best_file)?;
-    let mut reservoir = Reservoir::with_capacity(10000);
     let trs_data = (0..data.len())
         .map(|n_data| {
             let mut cd = (0..n_data)
@@ -290,9 +280,9 @@ fn search<'ctx, 'b, R: Rng>(
         record_hypotheses(
             &manager.tree().mcts().hypotheses,
             n_seen,
-            &mut best_fd,
-            &mut prediction_fd,
-            &mut reservoir,
+            best_fd,
+            prediction_fd,
+            reservoir,
             problem,
             run,
             order,
@@ -319,10 +309,6 @@ fn search<'ctx, 'b, R: Rng>(
         //         .to_file(out_file)
         //         .map_err(|_| "Record failed")?;
         // }
-    }
-    let mut all_fd = init_out_file(all_file)?;
-    for item in reservoir.to_vec().into_iter().map(|item| item.data) {
-        str_err(writeln!(all_fd, "{}", item))?;
     }
     Ok(manager.tree().mcts().search_time)
 }
