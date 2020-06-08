@@ -4,6 +4,13 @@ url = "https://pypi.org/simple"
 verify_ssl = true
 
 [dev-packages]
+python-language-server = {extras = ["all"],version = "*"}
+pyls-isort = "*"
+flake8 = "*"
+autoflake = "*"
+jedi = ">=0.13.0"
+json-rpc = ">=1.8.1"
+service-factory = ">=0.1.5"
 
 [packages]
 ipython = "*"
