@@ -9,6 +9,7 @@
 // TODO: Run *either* GP or MCTS.
 
 use docopt::Docopt;
+use generational_arena::{Arena, Index};
 use itertools::Itertools;
 use list_routine_learning_rs::*;
 use polytype::atype::with_ctx;
@@ -173,7 +174,7 @@ pub fn logsumexp(lps: &[f64]) -> f64 {
 #[allow(clippy::too_many_arguments)]
 fn process_prediction(
     data: &[TRSDatum],
-    seen: &[Hyp],
+    seen: &Arena<Hyp>,
     params: &Params,
     predictions: &mut Predictions,
 ) -> bool {
@@ -182,7 +183,7 @@ fn process_prediction(
     if let TRSDatum::Full(ref rule) = &data[n_data] {
         let input = &rule.lhs;
         let output = &rule.rhs[0];
-        let trs = best_so_far(seen);
+        let trs = best_so_far(seen.iter());
         let prediction = make_prediction(trs, input, params);
         let correct = prediction == *output;
         predictions.push((correct as usize, n_seen, trs.to_string()));
@@ -192,19 +193,23 @@ fn process_prediction(
     }
 }
 
-fn best_so_far_pair<'a, 'b, 'c>(pop: &'c [Hyp<'a, 'b>]) -> (usize, &'c Hyp<'a, 'b>) {
-    pop.iter()
-        .enumerate()
-        .max_by(|(_, x), (_, y)| {
-            x.lposterior
-                .partial_cmp(&y.lposterior)
-                .or_else(|| Some(Ordering::Less))
-                .unwrap()
-        })
-        .unwrap()
+fn best_so_far_pair<'a, 'b, 'c, I>(pop: I) -> (Index, &'c Hyp<'a, 'b>)
+where
+    I: Iterator<Item = (Index, &'c Hyp<'a, 'b>)>,
+{
+    pop.max_by(|(_, x), (_, y)| {
+        x.lposterior
+            .partial_cmp(&y.lposterior)
+            .or_else(|| Some(Ordering::Less))
+            .unwrap()
+    })
+    .unwrap()
 }
 
-fn best_so_far<'a, 'b, 'c>(pop: &'c [Hyp<'a, 'b>]) -> &'c TRS<'a, 'b> {
+fn best_so_far<'a, 'b, 'c, I>(pop: I) -> &'c TRS<'a, 'b>
+where
+    I: Iterator<Item = (Index, &'c Hyp<'a, 'b>)>,
+{
     &best_so_far_pair(pop).1.object.trs
 }
 
@@ -338,7 +343,7 @@ fn search<'ctx, 'b, R: Rng>(
 }
 
 fn record_hypotheses<R: Rng>(
-    hypotheses: &[Hyp],
+    hypotheses: &Arena<Hyp>,
     n: usize,
     best_fd: &mut std::fs::File,
     prediction_fd: &mut std::fs::File,
@@ -350,14 +355,23 @@ fn record_hypotheses<R: Rng>(
     rng: &mut R,
 ) -> Result<(), String> {
     // best
-    let i = if n == 0 {
-        0
-    } else {
-        best_so_far_pair(&hypotheses[..n]).0
-    };
+    let i =
+        best_so_far_pair(
+            hypotheses
+                .iter()
+                .sorted_by_key(|(x, _)| {
+                    let (x1, x2) = x.into_raw_parts();
+                    (x2, x1)
+                })
+                .take(n.max(1)),
+        )
+        .0;
     let best = hypotheses
         .iter()
-        .enumerate()
+        .sorted_by_key(|(x, _)| {
+            let (x1, x2) = x.into_raw_parts();
+            (x2, x1)
+        })
         .skip(n)
         .fold(vec![i], |mut acc, (i, h)| {
             let top_scorer = acc.last().expect("top_score");
@@ -375,11 +389,11 @@ fn record_hypotheses<R: Rng>(
             trial,
             &hypotheses[i].object.trs,
             hypotheses[i].object.time,
-            i,
+            hypotheses[i].object.count,
         ))?;
     }
     // predictions
-    let i = best_so_far_pair(hypotheses).0;
+    let i = best_so_far_pair(hypotheses.iter()).0;
     str_err(record_hypothesis(
         prediction_fd,
         problem,
@@ -388,11 +402,26 @@ fn record_hypotheses<R: Rng>(
         trial,
         &hypotheses[i].object.trs,
         hypotheses[i].object.time,
-        i,
+        hypotheses[i].object.count,
     ))?;
     // all
-    for (i, h) in hypotheses.iter().enumerate().skip(n) {
-        let h_str = hypothesis_string(problem, run, order, trial, &h.object.trs, h.object.time, i);
+    for (_, h) in hypotheses
+        .iter()
+        .sorted_by_key(|(x, _)| {
+            let (x1, x2) = x.into_raw_parts();
+            (x2, x1)
+        })
+        .skip(n)
+    {
+        let h_str = hypothesis_string(
+            problem,
+            run,
+            order,
+            trial,
+            &h.object.trs,
+            h.object.time,
+            h.object.count,
+        );
         reservoir.add(ReservoirItem::new(h_str, rng));
     }
     Ok(())

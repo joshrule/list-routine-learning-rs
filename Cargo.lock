@@ -162,6 +162,7 @@ name = "list_routine_learning_rs"
 version = "0.1.0"
 dependencies = [
  "docopt 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "generational-arena 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "itertools 0.8.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "polytype 6.1.1",
  "programinduction 0.8.0",

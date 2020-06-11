@@ -13,6 +13,7 @@ edition="2018"
 
 [dependencies]
 docopt = "1.1"
+generational-arena = "0.2"
 itertools = "0.8"
 polytype = "6.1"
 programinduction = "0.8"
