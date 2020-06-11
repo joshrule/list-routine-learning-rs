@@ -100,6 +100,15 @@ version = "1.0.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
+name = "generational-arena"
+version = "0.2.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "cfg-if 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.111 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "getrandom"
 version = "0.1.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -235,6 +244,7 @@ name = "programinduction"
 version = "0.8.0"
 dependencies = [
  "crossbeam-channel 0.3.9 (registry+https://github.com/rust-lang/crates.io-index)",
+ "generational-arena 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "itertools 0.8.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "maplit 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -454,6 +464,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 "checksum docopt 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "7f525a586d310c87df72ebcd98009e57f1cc030c8c268305287a476beb653969"
 "checksum either 1.5.3 (registry+https://github.com/rust-lang/crates.io-index)" = "bb1f6b1ce1c140482ea30ddd3335fc0024ac7ee112895426e0a629a6c20adfe3"
 "checksum fnv 1.0.7 (registry+https://github.com/rust-lang/crates.io-index)" = "3f9eec918d3f24069decb9af1554cad7c880e2da24a9afd88aca000531ab82c1"
+"checksum generational-arena 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)" = "8e1d3b771574f62d0548cee0ad9057857e9fc25d7a3335f140c84f6acd0bf601"
 "checksum getrandom 0.1.14 (registry+https://github.com/rust-lang/crates.io-index)" = "7abc8dd8451921606d809ba32e95b6111925cd2906060d2dcc29c070220503eb"
 "checksum hermit-abi 0.1.13 (registry+https://github.com/rust-lang/crates.io-index)" = "91780f809e750b0a89f5544be56617ff6b1227ee485bcb06ebe10cdf89bd3b71"
 "checksum indexmap 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)" = "c398b2b113b55809ceb9ee3e753fcbac793f1956663f3c36549c1346015c2afe"
