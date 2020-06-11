@@ -35,7 +35,7 @@ use term_rewriting::{trace::Trace, Operator, Rule, Term};
 
 type Prediction = (usize, usize, String);
 type Predictions = Vec<Prediction>;
-type Hyp<'a, 'b> = Hypothesis<MCTSObj<'a, 'b>, TRSDatum, MCTSModel<'a, 'b>>;
+type Hyp<'a, 'b> = Hypothesis<MCTSObj<'a, 'b>, &'b TRSDatum, MCTSModel<'a, 'b>>;
 
 fn main() {
     with_ctx(4096, |ctx| {
@@ -262,7 +262,7 @@ fn search<'ctx, 'b, R: Rng>(
     let mut manager = make_manager(lex, background, params, &[], rng);
     let mut timeout = params.simulation.timeout;
     let mut n_seen = 0;
-    let trs_data = (0..data.len())
+    let trs_data_owned = (0..data.len())
         .map(|n_data| {
             let mut cd = (0..n_data)
                 .map(|idx| TRSDatum::Full(data[idx].clone()))
@@ -270,6 +270,10 @@ fn search<'ctx, 'b, R: Rng>(
             cd.push(TRSDatum::Partial(data[n_data].lhs.clone()));
             cd
         })
+        .collect_vec();
+    let trs_data = trs_data_owned
+        .iter()
+        .map(|data| data.iter().collect_vec())
         .collect_vec();
     for n_data in 0..data.len() {
         update_data(&mut manager, &trs_data[n_data], rng);
@@ -409,7 +413,7 @@ fn hypothesis_string(
 
 fn update_data<'a, 'b, R: Rng>(
     manager: &mut MCTSManager<TRSMCTS<'a, 'b>>,
-    data: &'b [TRSDatum],
+    data: &'b [&'b TRSDatum],
     rng: &mut R,
 ) {
     // 1. Update the known data.
@@ -435,7 +439,7 @@ fn make_manager<'ctx, 'b, R: Rng>(
     lex: Lexicon<'ctx, 'b>,
     background: &'b [Rule],
     params: &Params,
-    data: &'b [TRSDatum],
+    data: &'b [&'b TRSDatum],
     rng: &mut R,
 ) -> MCTSManager<TRSMCTS<'ctx, 'b>> {
     let mut mcts = TRSMCTS::new(
