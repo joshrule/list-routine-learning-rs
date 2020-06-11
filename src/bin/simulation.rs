@@ -91,6 +91,10 @@ fn main() {
         );
 
         notice("searching", 0);
+        notice(
+            format!("problem,run,order,trial,steps,seen,search_time,total_time"),
+            1,
+        );
         let mut prediction_fd = exit_err(init_out_file(&prediction_filename), "bad file");
         let mut best_fd = exit_err(init_out_file(&best_filename), "bad file");
         let mut reservoir = Reservoir::with_capacity(10000);
@@ -262,6 +266,7 @@ fn search<'ctx, 'b, R: Rng>(
     let mut manager = make_manager(lex, background, params, &[], rng);
     let mut timeout = params.simulation.timeout;
     let mut n_seen = 0;
+    let mut n_step = 0;
     let trs_data_owned = (0..data.len())
         .map(|n_data| {
             let mut cd = (0..n_data)
@@ -275,11 +280,12 @@ fn search<'ctx, 'b, R: Rng>(
         .iter()
         .map(|data| data.iter().collect_vec())
         .collect_vec();
+    let start = Instant::now();
     for n_data in 0..data.len() {
         update_data(&mut manager, &trs_data[n_data], rng);
         let now = Instant::now();
         manager.tree_mut().mcts_mut().start_trial();
-        manager.step_until(rng, |_| now.elapsed().as_secs_f64() > (timeout as f64));
+        n_step += manager.step_until(rng, |_| now.elapsed().as_secs_f64() > (timeout as f64));
         manager.tree_mut().mcts_mut().finish_trial();
         record_hypotheses(
             &manager.tree().mcts().hypotheses,
@@ -306,14 +312,28 @@ fn search<'ctx, 'b, R: Rng>(
             params.simulation.timeout,
             params.simulation.confidence,
         );
-        // NOTE: skipping for actual runs --- a disk hog.
-        // if n_data == data.len() - 1 {
-        //     manager
-        //         .tree()
-        //         .to_file(out_file)
-        //         .map_err(|_| "Record failed")?;
-        // }
+        notice(
+            format!(
+                "{},{},{},{},{},{},{},{}",
+                problem,
+                run,
+                order,
+                n_data + 1,
+                n_step,
+                n_seen,
+                manager.tree().mcts().search_time,
+                start.elapsed().as_secs_f64(),
+            ),
+            1,
+        );
     }
+    // NOTE: skipping for actual runs --- a disk hog.
+    // if n_data == data.len() - 1 {
+    //     manager
+    //         .tree()
+    //         .to_file(out_file)
+    //         .map_err(|_| "Record failed")?;
+    // }
     Ok(manager.tree().mcts().search_time)
 }
 
