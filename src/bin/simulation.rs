@@ -93,7 +93,7 @@ fn main() {
 
         notice("searching", 0);
         notice(
-            format!("problem,run,order,trial,steps,seen,search_time,total_time"),
+            format!("problem,run,order,trial,steps,hypotheses,tree,dag,search_time,total_time"),
             1,
         );
         let mut prediction_fd = exit_err(init_out_file(&prediction_filename), "bad file");
@@ -127,8 +127,8 @@ fn main() {
 }
 
 fn report_time(search_time: f64, total_time: f64) {
-    notice(format!("search time: {:.3e}s", search_time), 0);
-    notice(format!("total time: {:.3e}s", total_time), 0);
+    notice(format!("search time: {:.3}s", search_time), 0);
+    notice(format!("total time: {:.3}s", total_time), 0);
 }
 
 fn load_args() -> Result<(Params, usize, String, String, String, String, String), String> {
@@ -270,8 +270,8 @@ fn search<'ctx, 'b, R: Rng>(
 ) -> Result<f64, String> {
     let mut manager = make_manager(lex, background, params, &[], rng);
     let mut timeout = params.simulation.timeout;
-    let mut n_seen = 0;
-    let mut n_step = 0;
+    let mut n_hyps = 0;
+    let mut n_step;
     let trs_data_owned = (0..data.len())
         .map(|n_data| {
             let mut cd = (0..n_data)
@@ -290,11 +290,11 @@ fn search<'ctx, 'b, R: Rng>(
         update_data(&mut manager, &trs_data[n_data], rng);
         let now = Instant::now();
         manager.tree_mut().mcts_mut().start_trial();
-        n_step += manager.step_until(rng, |_| now.elapsed().as_secs_f64() > (timeout as f64));
+        n_step = manager.step_until(rng, |_| now.elapsed().as_secs_f64() > (timeout as f64));
         manager.tree_mut().mcts_mut().finish_trial();
         record_hypotheses(
             &manager.tree().mcts().hypotheses,
-            n_seen,
+            n_hyps,
             best_fd,
             prediction_fd,
             reservoir,
@@ -304,8 +304,8 @@ fn search<'ctx, 'b, R: Rng>(
             n_data + 1,
             rng,
         )?;
-        n_seen = manager.tree().mcts().hypotheses.len();
-        // // Make a prediction.
+        n_hyps = manager.tree().mcts().hypotheses.len();
+        // Make a prediction.
         let trss = &manager.tree().mcts().hypotheses;
         let prediction_data = (0..=n_data)
             .map(|idx| TRSDatum::Full(data[idx].clone()))
@@ -319,13 +319,15 @@ fn search<'ctx, 'b, R: Rng>(
         );
         notice(
             format!(
-                "{},{},{},{},{},{},{},{}",
+                "{},{},{},{},{},{},{},{},{},{}",
                 problem,
                 run,
                 order,
                 n_data + 1,
                 n_step,
-                n_seen,
+                n_hyps,
+                manager.tree().tree().tree_size(),
+                manager.tree().tree().dag_size(),
                 manager.tree().mcts().search_time,
                 start.elapsed().as_secs_f64(),
             ),
