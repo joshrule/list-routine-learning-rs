@@ -355,17 +355,16 @@ fn record_hypotheses<R: Rng>(
     rng: &mut R,
 ) -> Result<(), String> {
     // best
-    let i =
-        best_so_far_pair(
-            hypotheses
-                .iter()
-                .sorted_by_key(|(x, _)| {
-                    let (x1, x2) = x.into_raw_parts();
-                    (x2, x1)
-                })
-                .take(n.max(1)),
-        )
-        .0;
+    let i = best_so_far_pair(
+        hypotheses
+            .iter()
+            .sorted_by_key(|(x, _)| {
+                let (x1, x2) = x.into_raw_parts();
+                (x2, x1)
+            })
+            .take(n.max(1)),
+    )
+    .0;
     let best = hypotheses
         .iter()
         .sorted_by_key(|(x, _)| {
@@ -465,23 +464,14 @@ fn update_data<'a, 'b, R: Rng>(
     data: &'b [&'b TRSDatum],
     rng: &mut R,
 ) {
-    // 1. Update the known data.
-    // notice("updating data", 1);
+    // TODO: this doesn't feel semantically very clean. Refactor.
+    // 1. Reset the MCTS store.
+    manager.tree_mut().mcts_mut().clear();
     manager.tree_mut().mcts_mut().data = data;
+    let root_state = manager.tree_mut().mcts_mut().root();
 
-    // 2. Update the tree structure.
-    // notice("updating tree", 1);
-    manager.tree_mut().check_tree(rng);
-
-    // 3. Update the hypotheses: recompute the posterior.
-    // notice("updating hypotheses", 1);
-    manager.tree_mut().mcts_mut().update_hypotheses();
-
-    // 4. Update the state evaluations.
-    //    - Copy the evaluation information to nodes from objects.
-    //    - Iteratively update the Q values (the root Q is the sum over the child Qs).
-    // notice("updating state evaluations", 1);
-    manager.tree_mut().reevaluate_states();
+    // 2. Clear the tree store.
+    manager.tree_mut().reset(root_state, rng);
 }
 
 fn make_manager<'ctx, 'b, R: Rng>(
