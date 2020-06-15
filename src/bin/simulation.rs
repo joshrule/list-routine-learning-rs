@@ -171,46 +171,58 @@ pub fn logsumexp(lps: &[f64]) -> f64 {
     largest + x
 }
 
-#[allow(clippy::too_many_arguments)]
 fn process_prediction(
     data: &[TRSDatum],
-    seen: &Arena<Hyp>,
+    query: &Rule,
+    hyps: &Arena<Hyp>,
     params: &Params,
     predictions: &mut Predictions,
 ) -> bool {
-    let n_data = data.len() - 1;
-    let n_seen = seen.len();
-    if let TRSDatum::Full(ref rule) = &data[n_data] {
-        let input = &rule.lhs;
-        let output = &rule.rhs[0];
-        let trs = best_so_far(seen.iter());
-        let prediction = make_prediction(trs, input, params);
-        let correct = prediction == *output;
-        predictions.push((correct as usize, n_seen, trs.to_string()));
-        correct
+    let n_hyps = hyps.len();
+    let input = &query.lhs;
+    let output = &query.rhs[0];
+    let trs = best_so_far(hyps.iter(), data);
+    let prediction = make_prediction(trs, input, params);
+    let correct = prediction == *output;
+    predictions.push((correct as usize, n_hyps, trs.to_string()));
+    correct
+}
+
+fn best_so_far_pair<'a, 'b, 'c, I>(hyps: I, data: &[TRSDatum]) -> (Index, &'c Hyp<'a, 'b>)
+where
+    I: Iterator<Item = (Index, &'c Hyp<'a, 'b>)>,
+{
+    let (general, specific): (Vec<_>, Vec<_>) = hyps
+        .map(|(x, y)| (x, y))
+        .partition(|(_, hyp)| hyp.model.generalizes(data));
+    if !general.is_empty() {
+        general
+            .into_iter()
+            .max_by(|(_, x), (_, y)| {
+                x.lposterior
+                    .partial_cmp(&y.lposterior)
+                    .or_else(|| Some(Ordering::Less))
+                    .unwrap()
+            })
+            .unwrap()
     } else {
-        panic!("passed in partial as final datum");
+        specific
+            .into_iter()
+            .max_by(|(_, x), (_, y)| {
+                x.lposterior
+                    .partial_cmp(&y.lposterior)
+                    .or_else(|| Some(Ordering::Less))
+                    .unwrap()
+            })
+            .unwrap()
     }
 }
 
-fn best_so_far_pair<'a, 'b, 'c, I>(pop: I) -> (Index, &'c Hyp<'a, 'b>)
+fn best_so_far<'a, 'b, 'c, I>(pop: I, data: &[TRSDatum]) -> &'c TRS<'a, 'b>
 where
     I: Iterator<Item = (Index, &'c Hyp<'a, 'b>)>,
 {
-    pop.max_by(|(_, x), (_, y)| {
-        x.lposterior
-            .partial_cmp(&y.lposterior)
-            .or_else(|| Some(Ordering::Less))
-            .unwrap()
-    })
-    .unwrap()
-}
-
-fn best_so_far<'a, 'b, 'c, I>(pop: I) -> &'c TRS<'a, 'b>
-where
-    I: Iterator<Item = (Index, &'c Hyp<'a, 'b>)>,
-{
-    &best_so_far_pair(pop).1.object.trs
+    &best_so_far_pair(pop, data).1.object.trs
 }
 
 fn make_prediction<'a, 'b>(trs: &TRS<'a, 'b>, input: &Term, params: &Params) -> Term {
@@ -302,15 +314,15 @@ fn search<'ctx, 'b, R: Rng>(
             run,
             order,
             n_data + 1,
+            &trs_data_owned[n_data],
             rng,
         )?;
         n_hyps = manager.tree().mcts().hypotheses.len();
         // Make a prediction.
-        let trss = &manager.tree().mcts().hypotheses;
-        let prediction_data = (0..=n_data)
-            .map(|idx| TRSDatum::Full(data[idx].clone()))
-            .collect_vec();
-        let correct = process_prediction(&prediction_data, trss, params, predictions);
+        let hyps = &manager.tree().mcts().hypotheses;
+        let current_data = &trs_data_owned[n_data];
+        let query = &data[n_data];
+        let correct = process_prediction(current_data, query, hyps, params, predictions);
         update_timeout(
             correct,
             &mut timeout,
@@ -354,6 +366,7 @@ fn record_hypotheses<R: Rng>(
     run: usize,
     order: usize,
     trial: usize,
+    data: &[TRSDatum],
     rng: &mut R,
 ) -> Result<(), String> {
     // best
@@ -365,6 +378,7 @@ fn record_hypotheses<R: Rng>(
                 (x2, x1)
             })
             .take(n.max(1)),
+        data,
     )
     .0;
     let best = hypotheses
@@ -394,7 +408,7 @@ fn record_hypotheses<R: Rng>(
         ))?;
     }
     // predictions
-    let i = best_so_far_pair(hypotheses.iter()).0;
+    let i = best_so_far_pair(hypotheses.iter(), data).0;
     str_err(record_hypothesis(
         prediction_fd,
         problem,
