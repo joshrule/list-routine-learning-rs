@@ -484,10 +484,9 @@ fn update_data<'a, 'b, R: Rng>(
     // 1. Reset the MCTS store.
     manager.tree_mut().mcts_mut().clear();
     manager.tree_mut().mcts_mut().data = data;
-    let root_state = manager.tree_mut().mcts_mut().root();
 
     // 2. Clear the tree store.
-    manager.tree_mut().reset(root_state, rng);
+    manager.tree_mut().prune_except_top(10, rng);
 }
 
 fn make_manager<'ctx, 'b, R: Rng>(
