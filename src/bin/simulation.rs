@@ -15,7 +15,7 @@ use list_routine_learning_rs::*;
 use polytype::atype::with_ctx;
 use programinduction::{
     trs::{
-        mcts::{MCTSModel, MCTSObj, MCTSStateEvaluator, ThompsonMoveEvaluator, TRSMCTS},
+        mcts::{MCTSModel, MCTSObj, MCTSStateEvaluator, MaxThompsonMoveEvaluator, TRSMCTS},
         Datum as TRSDatum, Hypothesis, Lexicon, TRS,
     },
     MCTSManager,
@@ -508,7 +508,7 @@ fn make_manager<'ctx, 'b, R: Rng>(
         params.mcts,
     );
     let state_eval = MCTSStateEvaluator;
-    let move_eval = ThompsonMoveEvaluator;
+    let move_eval = MaxThompsonMoveEvaluator;
     let root = mcts.root();
     MCTSManager::new(mcts, root, state_eval, move_eval, rng)
 }
