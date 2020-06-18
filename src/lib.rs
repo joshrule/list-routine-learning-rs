@@ -174,6 +174,7 @@ pub struct SimulationParams {
     pub hi: usize,
     pub signature: String,
     pub background: String,
+    pub top_n: usize,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

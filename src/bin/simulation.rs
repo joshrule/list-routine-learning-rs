@@ -299,7 +299,12 @@ fn search<'ctx, 'b, R: Rng>(
         .collect_vec();
     let start = Instant::now();
     for n_data in 0..data.len() {
-        update_data(&mut manager, &trs_data[n_data], rng);
+        update_data(
+            &mut manager,
+            &trs_data[n_data],
+            params.simulation.top_n,
+            rng,
+        );
         let now = Instant::now();
         manager.tree_mut().mcts_mut().start_trial();
         n_step = manager.step_until(rng, |_| now.elapsed().as_secs_f64() > (timeout as f64));
@@ -478,6 +483,7 @@ fn hypothesis_string(
 fn update_data<'a, 'b, R: Rng>(
     manager: &mut MCTSManager<TRSMCTS<'a, 'b>>,
     data: &'b [&'b TRSDatum],
+    top_n: usize,
     rng: &mut R,
 ) {
     // TODO: this doesn't feel semantically very clean. Refactor.
@@ -487,7 +493,7 @@ fn update_data<'a, 'b, R: Rng>(
     let root_state = manager.tree_mut().mcts_mut().root();
 
     // 2. Clear the tree store.
-    manager.tree_mut().prune_except_top(10, root_state, rng);
+    manager.tree_mut().prune_except_top(top_n, root_state, rng);
 }
 
 fn make_manager<'ctx, 'b, R: Rng>(
