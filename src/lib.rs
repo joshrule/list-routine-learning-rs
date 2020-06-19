@@ -131,13 +131,20 @@ impl<T: Eq> Reservoir<T> {
             size: n,
         }
     }
-    pub fn add(&mut self, item: ReservoirItem<T>) {
+    pub fn add<F, R: Rng>(&mut self, f: F, rng: &mut R)
+    where
+        F: Fn() -> T,
+    {
         if self.data.len() < self.size {
-            self.data.push(item);
+            self.data.push(ReservoirItem::new(f(), rng));
         } else if let Some(best) = self.data.peek() {
-            if item < *best {
+            let item_score = rng.gen();
+            if item_score < best.score {
                 self.data.pop();
-                self.data.push(item);
+                self.data.push(ReservoirItem {
+                    score: item_score,
+                    data: f(),
+                });
             }
         }
     }

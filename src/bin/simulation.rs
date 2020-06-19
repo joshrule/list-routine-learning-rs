@@ -15,8 +15,8 @@ use list_routine_learning_rs::*;
 use polytype::atype::with_ctx;
 use programinduction::{
     trs::{
-        mcts::{MCTSModel, MCTSObj, MCTSStateEvaluator, MaxThompsonMoveEvaluator, TRSMCTS},
-        Datum as TRSDatum, Hypothesis, Lexicon, TRS,
+        mcts::{MCTSObj, MCTSStateEvaluator, MaxThompsonMoveEvaluator, TRSMCTS},
+        Datum as TRSDatum, Lexicon, TRS,
     },
     MCTSManager,
 };
@@ -27,6 +27,7 @@ use std::{
     f64,
     fs::File,
     io::{BufReader, Write},
+    ops::Deref,
     path::PathBuf,
     process::exit,
     str,
@@ -36,7 +37,6 @@ use term_rewriting::{trace::Trace, Operator, Rule, Term};
 
 type Prediction = (usize, usize, String);
 type Predictions = Vec<Prediction>;
-type Hyp<'a, 'b> = Hypothesis<MCTSObj<'a, 'b>, &'b TRSDatum, MCTSModel<'a, 'b>>;
 
 fn main() {
     with_ctx(4096, |ctx| {
@@ -171,30 +171,34 @@ pub fn logsumexp(lps: &[f64]) -> f64 {
     largest + x
 }
 
-fn process_prediction(
-    data: &[TRSDatum],
+fn process_prediction<'ctx, 'b>(
+    mcts: &TRSMCTS<'ctx, 'b>,
     query: &Rule,
-    hyps: &Arena<Hyp>,
+    hyps: &Arena<Box<MCTSObj<'ctx>>>,
     params: &Params,
     predictions: &mut Predictions,
 ) -> bool {
     let n_hyps = hyps.len();
     let input = &query.lhs;
     let output = &query.rhs[0];
-    let trs = best_so_far(hyps.iter(), data);
-    let prediction = make_prediction(trs, input, params);
-    let correct = prediction == *output;
-    predictions.push((correct as usize, n_hyps, trs.to_string()));
-    correct
+    match best_so_far(hyps.iter().map(|(idx, b)| (idx, b.deref()))).play(mcts) {
+        None => false,
+        Some(trs) => {
+            let prediction = make_prediction(&trs, input, params);
+            let correct = prediction == *output;
+            predictions.push((correct as usize, n_hyps, trs.to_string()));
+            correct
+        }
+    }
 }
 
-fn best_so_far_pair<'a, 'b, 'c, I>(hyps: I, data: &[TRSDatum]) -> (Index, &'c Hyp<'a, 'b>)
+fn best_so_far_pair<'a, 'b, I>(hyps: I) -> (Index, &'b MCTSObj<'a>)
 where
-    I: Iterator<Item = (Index, &'c Hyp<'a, 'b>)>,
+    I: Iterator<Item = (Index, &'b MCTSObj<'a>)>,
 {
     let (general, specific): (Vec<_>, Vec<_>) = hyps
         .map(|(x, y)| (x, y))
-        .partition(|(_, hyp)| hyp.model.generalizes(data));
+        .partition(|(_, hyp)| hyp.generalizes);
     if !general.is_empty() {
         general
             .into_iter()
@@ -218,11 +222,11 @@ where
     }
 }
 
-fn best_so_far<'a, 'b, 'c, I>(pop: I, data: &[TRSDatum]) -> &'c TRS<'a, 'b>
+fn best_so_far<'a, 'b, I>(pop: I) -> &'b MCTSObj<'a>
 where
-    I: Iterator<Item = (Index, &'c Hyp<'a, 'b>)>,
+    I: Iterator<Item = (Index, &'b MCTSObj<'a>)>,
 {
-    &best_so_far_pair(pop, data).1.object.trs
+    &best_so_far_pair(pop).1
 }
 
 fn make_prediction<'a, 'b>(trs: &TRS<'a, 'b>, input: &Term, params: &Params) -> Term {
@@ -319,15 +323,14 @@ fn search<'ctx, 'b, R: Rng>(
             run,
             order,
             n_data + 1,
-            &trs_data_owned[n_data],
+            manager.tree().mcts(),
             rng,
         )?;
         n_hyps = manager.tree().mcts().hypotheses.len();
         // Make a prediction.
         let hyps = &manager.tree().mcts().hypotheses;
-        let current_data = &trs_data_owned[n_data];
         let query = &data[n_data];
-        let correct = process_prediction(current_data, query, hyps, params, predictions);
+        let correct = process_prediction(manager.tree().mcts(), query, hyps, params, predictions);
         update_timeout(
             correct,
             &mut timeout,
@@ -361,8 +364,8 @@ fn search<'ctx, 'b, R: Rng>(
     Ok(manager.tree().mcts().search_time)
 }
 
-fn record_hypotheses<R: Rng>(
-    hypotheses: &Arena<Hyp>,
+fn record_hypotheses<'ctx, 'b, R: Rng>(
+    hypotheses: &Arena<Box<MCTSObj<'ctx>>>,
     n: usize,
     best_fd: &mut std::fs::File,
     prediction_fd: &mut std::fs::File,
@@ -371,19 +374,19 @@ fn record_hypotheses<R: Rng>(
     run: usize,
     order: usize,
     trial: usize,
-    data: &[TRSDatum],
+    mcts: &TRSMCTS<'ctx, 'b>,
     rng: &mut R,
 ) -> Result<(), String> {
     // best
     let i = best_so_far_pair(
         hypotheses
             .iter()
+            .map(|(idx, b)| (idx, b.deref()))
             .sorted_by_key(|(x, _)| {
                 let (x1, x2) = x.into_raw_parts();
                 (x2, x1)
             })
             .take(n.max(1)),
-        data,
     )
     .0;
     let best = hypotheses
@@ -407,22 +410,22 @@ fn record_hypotheses<R: Rng>(
             run,
             order,
             trial,
-            &hypotheses[i].object.trs,
-            hypotheses[i].object.time,
-            hypotheses[i].object.count,
+            &hypotheses[i].play(mcts).expect("trs"),
+            hypotheses[i].time,
+            hypotheses[i].count,
         ))?;
     }
     // predictions
-    let i = best_so_far_pair(hypotheses.iter(), data).0;
+    let i = best_so_far_pair(hypotheses.iter().map(|(idx, b)| (idx, b.deref()))).0;
     str_err(record_hypothesis(
         prediction_fd,
         problem,
         run,
         order,
         trial,
-        &hypotheses[i].object.trs,
-        hypotheses[i].object.time,
-        hypotheses[i].object.count,
+        &hypotheses[i].play(mcts).expect("trs"),
+        hypotheses[i].time,
+        hypotheses[i].count,
     ))?;
     // all
     for (_, h) in hypotheses
@@ -433,16 +436,13 @@ fn record_hypotheses<R: Rng>(
         })
         .skip(n)
     {
-        let h_str = hypothesis_string(
-            problem,
-            run,
-            order,
-            trial,
-            &h.object.trs,
-            h.object.time,
-            h.object.count,
+        reservoir.add(
+            || {
+                let trs = h.play(mcts).expect("trs");
+                hypothesis_string(problem, run, order, trial, &trs, h.time, h.count)
+            },
+            rng,
         );
-        reservoir.add(ReservoirItem::new(h_str, rng));
     }
     Ok(())
 }
