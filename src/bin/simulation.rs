@@ -199,22 +199,14 @@ where
     if !general.is_empty() {
         general
             .into_iter()
-            .max_by(|(_, x), (_, y)| {
-                x.lposterior
-                    .partial_cmp(&y.lposterior)
-                    .or_else(|| Some(Ordering::Less))
-                    .unwrap()
-            })
+            .rev()
+            .max_by(|(_, x), (_, y)| x.lposterior.partial_cmp(&y.lposterior).expect("no NAN"))
             .unwrap()
     } else {
         specific
             .into_iter()
-            .max_by(|(_, x), (_, y)| {
-                x.lposterior
-                    .partial_cmp(&y.lposterior)
-                    .or_else(|| Some(Ordering::Less))
-                    .unwrap()
-            })
+            .rev()
+            .max_by(|(_, x), (_, y)| x.lposterior.partial_cmp(&y.lposterior).expect("no NAN"))
             .unwrap()
     }
 }
@@ -265,7 +257,10 @@ fn update_timeout(correct: bool, timeout: &mut usize, ceiling: usize, scale: f64
 
 fn init_out_file(filename: &str) -> Result<std::fs::File, String> {
     let mut fd = str_err(std::fs::File::create(filename))?;
-    str_err(writeln!(fd, "problem,run,order,trial,time,count,trs"))?;
+    str_err(writeln!(
+        fd,
+        "problem,run,order,trial,time,count,generalizes,lprior,llikelihood,lposterior,trs"
+    ))?;
     Ok(fd)
 }
 
@@ -283,7 +278,7 @@ fn search<'ctx, 'b, R: Rng>(
 ) -> Result<f64, String> {
     let mut manager = make_manager(lex, background, params, &[], rng);
     let mut timeout = params.simulation.timeout;
-    let mut n_hyps = 0;
+    let mut n_hyps;
     let mut n_step;
     let trs_data_owned = (0..data.len())
         .map(|n_data| {
@@ -312,7 +307,6 @@ fn search<'ctx, 'b, R: Rng>(
         manager.tree_mut().mcts_mut().finish_trial();
         record_hypotheses(
             &manager.tree().mcts().hypotheses,
-            n_hyps,
             best_fd,
             prediction_fd,
             reservoir,
@@ -360,7 +354,6 @@ fn search<'ctx, 'b, R: Rng>(
 
 fn record_hypotheses<'ctx, 'b, R: Rng>(
     hypotheses: &Arena<Box<MCTSObj<'ctx>>>,
-    n: usize,
     best_fd: &mut std::fs::File,
     prediction_fd: &mut std::fs::File,
     reservoir: &mut Reservoir<String>,
@@ -372,41 +365,30 @@ fn record_hypotheses<'ctx, 'b, R: Rng>(
     rng: &mut R,
 ) -> Result<(), String> {
     // best
-    let i = best_so_far_pair(
-        hypotheses
-            .iter()
-            .map(|(idx, b)| (idx, b.deref()))
-            .sorted_by_key(|(x, _)| {
-                let (x1, x2) = x.into_raw_parts();
-                (x2, x1)
-            })
-            .take(n.max(1)),
-    )
-    .0;
     let best = hypotheses
         .iter()
-        .sorted_by_key(|(x, _)| {
-            let (x1, x2) = x.into_raw_parts();
-            (x2, x1)
-        })
-        .skip(n)
-        .fold(vec![i], |mut acc, (i, h)| {
-            let top_scorer = acc.last().expect("top_score");
-            if hypotheses[*top_scorer].lposterior < h.lposterior {
+        .filter(|(_, y)| y.generalizes)
+        .sorted_by_key(|(_, y)| y.count)
+        .fold(vec![], |mut acc, (i, h)| {
+            if acc.is_empty() {
                 acc.push(i);
+            } else {
+                let top_scorer = acc.last().expect("top_scorer");
+                if h.lposterior > hypotheses[*top_scorer].lposterior {
+                    acc.push(i);
+                }
             }
             acc
         });
-    for &i in &best {
+    for i in best {
         str_err(record_hypothesis(
             best_fd,
             problem,
             run,
             order,
             trial,
-            &hypotheses[i].play(mcts).expect("trs"),
-            hypotheses[i].time,
-            hypotheses[i].count,
+            &hypotheses[i],
+            mcts,
         ))?;
     }
     // predictions
@@ -417,23 +399,27 @@ fn record_hypotheses<'ctx, 'b, R: Rng>(
         run,
         order,
         trial,
-        &hypotheses[i].play(mcts).expect("trs"),
-        hypotheses[i].time,
-        hypotheses[i].count,
+        &hypotheses[i],
+        mcts,
     ))?;
     // all
-    for (_, h) in hypotheses
-        .iter()
-        .sorted_by_key(|(x, _)| {
-            let (x1, x2) = x.into_raw_parts();
-            (x2, x1)
-        })
-        .skip(n)
-    {
+    for (_, h) in hypotheses.iter().sorted_by_key(|(_, y)| y.count) {
         reservoir.add(
             || {
                 let trs = h.play(mcts).expect("trs");
-                hypothesis_string(problem, run, order, trial, &trs, h.time, h.count)
+                hypothesis_string(
+                    problem,
+                    run,
+                    order,
+                    trial,
+                    &trs,
+                    h.time,
+                    h.count,
+                    h.generalizes,
+                    h.lprior,
+                    h.llikelihood,
+                    h.lposterior,
+                )
             },
             rng,
         );
@@ -441,20 +427,31 @@ fn record_hypotheses<'ctx, 'b, R: Rng>(
     Ok(())
 }
 
-fn record_hypothesis(
+fn record_hypothesis<'ctx, 'b>(
     f: &mut std::fs::File,
     problem: &str,
     run: usize,
     order: usize,
     trial: usize,
-    trs: &TRS,
-    time: f64,
-    count: usize,
+    obj: &MCTSObj<'ctx>,
+    mcts: &TRSMCTS<'ctx, 'b>,
 ) -> std::io::Result<()> {
     writeln!(
         f,
         "{}",
-        hypothesis_string(problem, run, order, trial, trs, time, count)
+        hypothesis_string(
+            problem,
+            run,
+            order,
+            trial,
+            &obj.play(mcts).expect("trs"),
+            obj.time,
+            obj.count,
+            obj.generalizes,
+            obj.lprior,
+            obj.llikelihood,
+            obj.lposterior,
+        )
     )
 }
 
@@ -466,11 +463,25 @@ fn hypothesis_string(
     trs: &TRS,
     time: f64,
     count: usize,
+    generalizes: bool,
+    lprior: f64,
+    llikelihood: f64,
+    lposterior: f64,
 ) -> String {
     let trs_str = trs.to_string().lines().join(" ");
     format!(
-        "\"{}\",{},{},{},{},{},\"{}\"",
-        problem, run, order, trial, time, count, trs_str
+        "\"{}\",{},{},{},{},{},{},{},{},{},\"{}\"",
+        problem,
+        run,
+        order,
+        trial,
+        time,
+        count,
+        generalizes,
+        lprior,
+        llikelihood,
+        lposterior,
+        trs_str,
     )
 }
 
