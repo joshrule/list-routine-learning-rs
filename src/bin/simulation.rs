@@ -295,14 +295,14 @@ fn search<'ctx, 'b, R: Rng>(
         .collect_vec();
     let start = Instant::now();
     for n_data in 0..data.len() {
+        let now = Instant::now();
+        manager.tree_mut().mcts_mut().start_trial();
         update_data(
             &mut manager,
             &trs_data[n_data],
             params.simulation.top_n,
             rng,
         );
-        let now = Instant::now();
-        manager.tree_mut().mcts_mut().start_trial();
         n_step = manager.step_until(rng, |_| now.elapsed().as_secs_f64() > (timeout as f64));
         manager.tree_mut().mcts_mut().finish_trial();
         record_hypotheses(
