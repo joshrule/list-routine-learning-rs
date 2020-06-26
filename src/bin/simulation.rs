@@ -92,7 +92,7 @@ fn main() {
         );
 
         notice("searching", 0);
-        println!("problem,run,order,trial,steps,hypotheses,tree,dag,search_time,total_time");
+        println!("problem,run,order,trial,steps,tree,hypotheses,search_time,total_time");
         let mut prediction_fd = exit_err(init_out_file(&prediction_filename), "bad file");
         let mut best_fd = exit_err(init_out_file(&best_filename), "bad file");
         let mut reservoir = Reservoir::with_capacity(10000);
@@ -329,15 +329,14 @@ fn search<'ctx, 'b, R: Rng>(
             params.simulation.confidence,
         );
         println!(
-            "{},{},{},{},{},{},{},{},{},{}",
+            "{},{},{},{},{},{},{},{},{}",
             problem,
             run,
             order,
             n_data + 1,
             n_step,
-            n_hyps,
             manager.tree().tree().tree_size(),
-            manager.tree().tree().dag_size(),
+            n_hyps,
             manager.tree().mcts().search_time,
             start.elapsed().as_secs_f64(),
         );
