@@ -305,6 +305,11 @@ fn search<'ctx, 'b, R: Rng>(
         );
         n_step = manager.step_until(rng, |_| now.elapsed().as_secs_f64() > (timeout as f64));
         manager.tree_mut().mcts_mut().finish_trial();
+        n_hyps = manager.tree().mcts().hypotheses.len();
+        // Make a prediction.
+        let hyps = &manager.tree().mcts().hypotheses;
+        let query = &data[n_data];
+        let correct = process_prediction(manager.tree().mcts(), query, hyps, params, predictions);
         record_hypotheses(
             &manager.tree().mcts().hypotheses,
             best_fd,
@@ -315,13 +320,9 @@ fn search<'ctx, 'b, R: Rng>(
             order,
             n_data + 1,
             manager.tree().mcts(),
+            correct,
             rng,
         )?;
-        n_hyps = manager.tree().mcts().hypotheses.len();
-        // Make a prediction.
-        let hyps = &manager.tree().mcts().hypotheses;
-        let query = &data[n_data];
-        let correct = process_prediction(manager.tree().mcts(), query, hyps, params, predictions);
         update_timeout(
             correct,
             &mut timeout,
@@ -361,6 +362,7 @@ fn record_hypotheses<'ctx, 'b, R: Rng>(
     order: usize,
     trial: usize,
     mcts: &TRSMCTS<'ctx, 'b>,
+    correct: bool,
     rng: &mut R,
 ) -> Result<(), String> {
     // best
@@ -388,6 +390,7 @@ fn record_hypotheses<'ctx, 'b, R: Rng>(
             trial,
             &hypotheses[i],
             mcts,
+            None,
         ))?;
     }
     // predictions
@@ -400,6 +403,7 @@ fn record_hypotheses<'ctx, 'b, R: Rng>(
         trial,
         &hypotheses[i],
         mcts,
+        Some(correct),
     ))?;
     // all
     for (_, h) in hypotheses.iter().sorted_by_key(|(_, y)| y.count) {
@@ -418,6 +422,7 @@ fn record_hypotheses<'ctx, 'b, R: Rng>(
                     h.lprior,
                     h.llikelihood,
                     h.lposterior,
+                    None,
                 )
             },
             rng,
@@ -434,6 +439,7 @@ fn record_hypothesis<'ctx, 'b>(
     trial: usize,
     obj: &MCTSObj<'ctx>,
     mcts: &TRSMCTS<'ctx, 'b>,
+    correct: Option<bool>,
 ) -> std::io::Result<()> {
     writeln!(
         f,
@@ -450,6 +456,7 @@ fn record_hypothesis<'ctx, 'b>(
             obj.lprior,
             obj.llikelihood,
             obj.lposterior,
+            correct,
         )
     )
 }
@@ -466,22 +473,40 @@ fn hypothesis_string(
     lprior: f64,
     llikelihood: f64,
     lposterior: f64,
+    correct: Option<bool>,
 ) -> String {
     let trs_str = trs.to_string().lines().join(" ");
-    format!(
-        "\"{}\",{},{},{},{},{},{},{},{},{},\"{}\"",
-        problem,
-        run,
-        order,
-        trial,
-        time,
-        count,
-        generalizes,
-        lprior,
-        llikelihood,
-        lposterior,
-        trs_str,
-    )
+    match correct {
+        None => format!(
+            "\"{}\",{},{},{},{},{},{},{},{},{},\"{}\"",
+            problem,
+            run,
+            order,
+            trial,
+            time,
+            count,
+            generalizes,
+            lprior,
+            llikelihood,
+            lposterior,
+            trs_str,
+        ),
+        Some(result) => format!(
+            "\"{}\",{},{},{},{},{},{},{},{},{},{},\"{}\"",
+            problem,
+            run,
+            order,
+            trial,
+            time,
+            count,
+            generalizes,
+            lprior,
+            llikelihood,
+            lposterior,
+            result,
+            trs_str,
+        ),
+    }
 }
 
 fn update_data<'a, 'b, R: Rng>(
