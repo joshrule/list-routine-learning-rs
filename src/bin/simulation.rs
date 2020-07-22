@@ -93,8 +93,8 @@ fn main() {
 
         notice("searching", 0);
         println!("problem,run,order,trial,steps,tree,hypotheses,search_time,total_time");
-        let mut prediction_fd = exit_err(init_out_file(&prediction_filename), "bad file");
-        let mut best_fd = exit_err(init_out_file(&best_filename), "bad file");
+        let mut prediction_fd = exit_err(init_out_file(&prediction_filename, true), "bad file");
+        let mut best_fd = exit_err(init_out_file(&best_filename, false), "bad file");
         let mut reservoir = Reservoir::with_capacity(10000);
         for run in 0..runs {
             let mut predictions = Vec::with_capacity(data.len());
@@ -116,7 +116,7 @@ fn main() {
             let elapsed = start.elapsed().as_secs_f64();
             report_time(search_time, elapsed);
         }
-        let mut all_fd = exit_err(init_out_file(&all_filename), "bad file");
+        let mut all_fd = exit_err(init_out_file(&all_filename, false), "bad file");
         for item in reservoir.to_vec().into_iter().map(|item| item.data) {
             exit_err(str_err(writeln!(all_fd, "{}", item)), "bad file");
         }
@@ -191,29 +191,20 @@ fn process_prediction<'ctx, 'b>(
 
 fn best_so_far_pair<'a, 'b, I>(hyps: I) -> (Index, &'b MCTSObj<'a>)
 where
-    I: Iterator<Item = (Index, &'b MCTSObj<'a>)>,
+    I: DoubleEndedIterator<Item = (Index, &'b MCTSObj<'a>)>,
 {
-    let (general, specific): (Vec<_>, Vec<_>) = hyps
-        .map(|(x, y)| (x, y))
-        .partition(|(_, hyp)| hyp.generalizes);
-    if !general.is_empty() {
-        general
-            .into_iter()
-            .rev()
-            .max_by(|(_, x), (_, y)| x.lposterior.partial_cmp(&y.lposterior).expect("no NAN"))
-            .unwrap()
-    } else {
-        specific
-            .into_iter()
-            .rev()
-            .max_by(|(_, x), (_, y)| x.lposterior.partial_cmp(&y.lposterior).expect("no NAN"))
-            .unwrap()
-    }
+    hyps.rev()
+        .max_by(|(_, x), (_, y)| {
+            x.ln_predict_posterior
+                .partial_cmp(&y.ln_predict_posterior)
+                .expect("no NAN")
+        })
+        .unwrap()
 }
 
 fn best_so_far<'a, 'b, I>(pop: I) -> &'b MCTSObj<'a>
 where
-    I: Iterator<Item = (Index, &'b MCTSObj<'a>)>,
+    I: DoubleEndedIterator<Item = (Index, &'b MCTSObj<'a>)>,
 {
     &best_so_far_pair(pop).1
 }
@@ -255,12 +246,19 @@ fn update_timeout(correct: bool, timeout: &mut usize, ceiling: usize, scale: f64
     // notice(format!("timeout {}creased to {}s", change, timeout), 1);
 }
 
-fn init_out_file(filename: &str) -> Result<std::fs::File, String> {
+fn init_out_file(filename: &str, long: bool) -> Result<std::fs::File, String> {
     let mut fd = str_err(std::fs::File::create(filename))?;
-    str_err(writeln!(
-        fd,
-        "problem,run,order,trial,time,count,generalizes,lprior,llikelihood,lposterior,trs"
-    ))?;
+    if long {
+        str_err(writeln!(
+            fd,
+            "problem,run,order,trial,time,count,lprior,llikelihood,lposterior,accuracy,trs"
+        ))?;
+    } else {
+        str_err(writeln!(
+            fd,
+            "problem,run,order,trial,time,count,lprior,llikelihood,lposterior,trs"
+        ))?;
+    }
     Ok(fd)
 }
 
@@ -368,14 +366,13 @@ fn record_hypotheses<'ctx, 'b, R: Rng>(
     // best
     let best = hypotheses
         .iter()
-        .filter(|(_, y)| y.generalizes)
         .sorted_by_key(|(_, y)| y.count)
         .fold(vec![], |mut acc, (i, h)| {
             if acc.is_empty() {
                 acc.push(i);
             } else {
                 let top_scorer = acc.last().expect("top_scorer");
-                if h.lposterior > hypotheses[*top_scorer].lposterior {
+                if h.ln_predict_posterior > hypotheses[*top_scorer].ln_predict_posterior {
                     acc.push(i);
                 }
             }
@@ -418,10 +415,9 @@ fn record_hypotheses<'ctx, 'b, R: Rng>(
                     &trs,
                     h.time,
                     h.count,
-                    h.generalizes,
-                    h.lprior,
-                    h.llikelihood,
-                    h.lposterior,
+                    h.ln_predict_prior,
+                    h.ln_predict_likelihood,
+                    h.ln_predict_posterior,
                     None,
                 )
             },
@@ -452,10 +448,9 @@ fn record_hypothesis<'ctx, 'b>(
             &obj.play(mcts).expect("trs"),
             obj.time,
             obj.count,
-            obj.generalizes,
-            obj.lprior,
-            obj.llikelihood,
-            obj.lposterior,
+            obj.ln_predict_prior,
+            obj.ln_predict_likelihood,
+            obj.ln_predict_posterior,
             correct,
         )
     )
@@ -469,7 +464,6 @@ fn hypothesis_string(
     trs: &TRS,
     time: f64,
     count: usize,
-    generalizes: bool,
     lprior: f64,
     llikelihood: f64,
     lposterior: f64,
@@ -478,6 +472,10 @@ fn hypothesis_string(
     let trs_str = trs.to_string().lines().join(" ");
     match correct {
         None => format!(
+            "\"{}\",{},{},{},{},{},{},{},{},\"{}\"",
+            problem, run, order, trial, time, count, lprior, llikelihood, lposterior, trs_str,
+        ),
+        Some(result) => format!(
             "\"{}\",{},{},{},{},{},{},{},{},{},\"{}\"",
             problem,
             run,
@@ -485,21 +483,6 @@ fn hypothesis_string(
             trial,
             time,
             count,
-            generalizes,
-            lprior,
-            llikelihood,
-            lposterior,
-            trs_str,
-        ),
-        Some(result) => format!(
-            "\"{}\",{},{},{},{},{},{},{},{},{},{},\"{}\"",
-            problem,
-            run,
-            order,
-            trial,
-            time,
-            count,
-            generalizes,
             lprior,
             llikelihood,
             lposterior,
@@ -515,14 +498,37 @@ fn update_data<'a, 'b, R: Rng>(
     top_n: usize,
     rng: &mut R,
 ) {
-    // TODO: this doesn't feel semantically very clean. Refactor.
-    // 1. Reset the MCTS store.
-    manager.tree_mut().mcts_mut().clear();
+    // 0. Update the data.
     manager.tree_mut().mcts_mut().data = data;
+
+    // 1. Get paths from top MCTSobjs.
+    let paths = manager
+        .tree()
+        .mcts()
+        .hypotheses
+        .iter()
+        .rev()
+        .map(|(_, n)| n)
+        .sorted_by(|a, b| {
+            a.ln_predict_posterior
+                .partial_cmp(&b.ln_predict_posterior)
+                .unwrap_or(Ordering::Equal)
+        })
+        .filter(|n| n.play(manager.tree().mcts()).is_some())
+        .map(|n| n.moves.clone())
+        .unique()
+        .take(top_n)
+        .collect_vec();
+
+    // 2. Reset the MCTS store.
+    // TODO: this doesn't feel semantically very clean. Refactor.
+    manager.tree_mut().mcts_mut().clear();
     let root_state = manager.tree_mut().mcts_mut().root();
 
-    // 2. Clear the tree store.
-    manager.tree_mut().prune_except_top(top_n, root_state, rng);
+    // 3. Clear the tree store.
+    manager
+        .tree_mut()
+        .prune_except_top(paths.into_iter(), root_state, rng);
 }
 
 fn make_manager<'ctx, 'b, R: Rng>(
