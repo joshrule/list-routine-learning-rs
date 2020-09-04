@@ -251,12 +251,12 @@ fn init_out_file(filename: &str, long: bool) -> Result<std::fs::File, String> {
     if long {
         str_err(writeln!(
             fd,
-            "problem,run,order,trial,time,count,lprior,llikelihood,lposterior,accuracy,trs"
+            "problem,run,order,trial,time,count,lrest,lmeta,lposterior,accuracy,trs"
         ))?;
     } else {
         str_err(writeln!(
             fd,
-            "problem,run,order,trial,time,count,lprior,llikelihood,lposterior,trs"
+            "problem,run,order,trial,time,count,lrest,lmeta,lposterior,trs"
         ))?;
     }
     Ok(fd)
@@ -415,8 +415,8 @@ fn record_hypotheses<'ctx, 'b, R: Rng>(
                     &trs,
                     h.time,
                     h.count,
-                    h.ln_predict_prior,
-                    h.ln_predict_likelihood,
+                    h.ln_predict_rest,
+                    h.ln_predict_meta,
                     h.ln_predict_posterior,
                     None,
                 )
@@ -448,8 +448,8 @@ fn record_hypothesis<'ctx, 'b>(
             &obj.play(mcts).expect("trs"),
             obj.time,
             obj.count,
-            obj.ln_predict_prior,
-            obj.ln_predict_likelihood,
+            obj.ln_predict_rest,
+            obj.ln_predict_meta,
             obj.ln_predict_posterior,
             correct,
         )
