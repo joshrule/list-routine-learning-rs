@@ -12,20 +12,45 @@
 <meta charset="UTF-8">
 <head>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/5.15.0/d3.min.js"></script>
+    <script type="text/javascript" src="https://code.jquery.com/jquery-1.6.2.min.js"></script>
     <style>
-     #info-box {
+     text {
+         font-weight: 100;
          font-family: SFMono-Regular,Consolas,"Liberation Mono",Menlo,Courier,monospace;
-         font-size: 75%;
+         font-size: 100%;
+     }
+     .mono {
+         font-family: SFMono-Regular,Consolas,"Liberation Mono",Menlo,Courier,monospace;
+     }
+     h4 {
+         font-family: "Helvetica Neue","Helvetica",Arial,sans-serif;
+         margin-left: 17.5px;
      }
     </style>
 </head>
 <body>
-    <script src="tree.js"></script>
-    <script src="draw_tree.js"></script>
     <div id="instructions">
-        <p>
-            <b>MCTS Tree Visualization</b>. Click green nodes to toggle subtrees. Black nodes are terminal. Gray nodes were never visited. Mouse over a node to see its information listed below. You can pan/zoom as needed.
-        </p>
+        <h4>MCTS Tree Visualization</h4>
+        <svg width="520" viewBox="0,0,520,68" style="font-size: 10px;">
+            <g transform="translate(20,8.5)">
+                <circle r="2.5" style="fill: #1b9e77;"></circle>
+                <text x="6" dy="0.32em">Revision &lt;move&gt; &lt;id&gt; &lt;score&gt; &lt;q&gt; &lt;n&gt; &lt;trs&gt;</text>
+            </g>
+            <g transform="translate(20,25.5)">
+                <circle r="2.5" style="fill: #333;"></circle>
+                <text x="6" dy="0.32em">Terminal &lt;move&gt; &lt;id&gt; &lt;score&gt; &lt;q&gt; &lt;n&gt; &lt;trs&gt;</text>
+            </g>
+            <g transform="translate(20,42.5)">
+                <circle r="2.5" style="fill: #ddd;"></circle>
+                <text x="6" dy="0.32em">Untried &lt;move&gt;</text>
+            </g>
+            <g transform="translate(20,59.5)">
+                <circle r="2.5" style="fill: #d95f02;"></circle>
+                <text x="6" dy="0.32em">Failure &lt;move&gt;</text>
+            </g>
+        </svg>
     </div>
-    <div id="info-box"></div>
+    <div id="svg-box"></div>
+    <script src="../tree.js"></script>
+    <script src="draw_tree.js"></script>
 </body>

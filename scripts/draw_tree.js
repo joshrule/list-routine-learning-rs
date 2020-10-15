@@ -1,160 +1,248 @@
 var width = window.innerWidth,
-    height = 500,
     diagonal = d3.linkHorizontal().x(d => d.y).y(d => d.x),
-    dx = 10,
-    dy = width / 10,
-    tree = d3.tree().nodeSize([dx, dy]),
-    margin = ({top: 10, right: 120, bottom: 10, left: 40});
+    nodeSize = 17,
+    root = d3.hierarchy(treeify_data(data, data.nodes[data.root], {move: "Empty", pruning: "None"})),
+    best = -Infinity;
 
-const root = d3.hierarchy(data);
 
-root.x0 = dy / 2;
-root.y0 = 0;
-root.descendants().forEach((d, i) => {
-    d.id = i;
+let uid = 0;
+root.descendants().reverse().forEach(d => {
+    // give each node a unique id
+    d.uid = uid++;
+    // sort children by number of visits
+    if (d.hasOwnProperty("children") && d.children !== null) {
+        d.children.sort((x, y) => {
+            if (!(x.data.hasOwnProperty("stats") || y.data.hasOwnProperty("stats"))){
+                return 0;
+            } else if (!x.data.hasOwnProperty("stats")) {
+                return 1;
+            } else if (!y.data.hasOwnProperty("stats")) {
+                return -1;
+            } else {
+                return y.data.stats.length - x.data.stats.length;
+            }
+        });
+    }
+    // toggle children off
     d._children = d.children;
     if (d.depth) d.children = null;
+    // collect the best child
+    if (d.data.score !== null && d.data.score > best) best = d.data.score;
+    // correct scores mangled by JSON
+    if (d.data.score === null && d.data.state.playout !== "untried") {
+        d.data.score = -Infinity;
+        d.data.q = -Infinity;
+    }
 });
+root.x0 = 0;
+root.x = 0;
+root.y0 = 0;
+root.y = 0;
 
-const svg = d3.select("body")
-      .append("svg")
-      .attr("viewBox", [-margin.left, -margin.top, width, dx])
-      .attr("width", width)
-      .attr("height", height)
-      .style("font", "10px sans-serif")
-      .style("user-select", "none");
+const nodes = root.descendants();
+
+let svg = d3.select("#svg-box")
+    .append("svg")
+    .attr("width", width)
+    .attr("viewBox", [-20, -20, width, (nodes.length + 1) * nodeSize])
+    .attr("font-family", "sans-serif")
+    .attr("font-size", 10);
 
 const gLink = svg.append("g")
       .attr("fill", "none")
-      .attr("stroke-opacity", 0.4)
-      .attr("stroke-width", 1.5);
+      .attr("stroke", "#999");
 
-const gNode = svg.append("g")
-      .attr("cursor", "pointer")
-      .attr("pointer-events", "all");
-
-svg.call(d3.zoom().on("zoom", zoomed));
+const gNode = svg.append("g").attr("pointer-events", "all");
 
 update(root);
 
-function zoomed() {
-    gLink.attr("transform", d3.event.transform);
-    gNode.attr("transform", d3.event.transform);
+
+function ser_node(node) {
+    let node_string;
+    switch (node.data.type) {
+      case "unvisited": node_string = ser_unvisited(node); break;
+      case "visited": node_string = ser_visited(node); break;
+      case "failed": node_string = ser_failed(node); break;
+      default: node_string = "unknown"; break;
+    }
+    let spacer = node_string.length > 0 ? "\t" : "";
+    let move_string = node.data.move.move;
+    return `${move_string}${spacer}${node_string}`;
 }
 
-function describe_node(d) {
-    let div = d3.select("#info-box");
-    var response = "";
-    if (d.data.hasOwnProperty('score')) {
-        response += "<li>" + "Score: " + d.data.score  + "</li>";
-    }
-    if (d.data.hasOwnProperty('q') && d.data.hasOwnProperty('n')) {
-        response += "<li>" + "Q/N: " + +(Math.round(d.data.q + "e+3")  + "e-3") + "/" + d.data.n + "</li>";
-    }
-    if (d.data.hasOwnProperty('pruned')) {
-        response += "<li>" + "Pruned: " + d.data.pruned  + "</li>";
-    }
-    if (d.data.hasOwnProperty('via')) {
-        response += "<li>" + "Via: " + d.data.via + "</li>";
-    }
-    if (d.data.hasOwnProperty('trs')) {
-        response += "<li>" + "TRS:<br/>" + d.data.trs.replace("/;/g", ";\n") + "</li>";
-    }
-    if (d.data.hasOwnProperty('playout')) {
-        response += "<li>" + "Playout:<br/>" + d.data.playout.replace('/\n/g', '<br>') + "</li>";
-    }
-    console.log(response);
-    if (response !== "") {
-        div.html("<ul>" + response + "</ul>");
+function ser_unvisited() {
+    return "";
+}
+
+function ser_failed() {
+    return "";
+}
+
+function logsumexp(scores) {
+    let corrected_scores = scores.map(s => s === null? -Infinity : s);
+    let largest = d3.max(corrected_scores);
+    let scaled_scores = corrected_scores.map(s => Math.exp(s - largest));
+    return Math.log(d3.sum(scaled_scores)) + largest;
+}
+
+function ser_visited(node) {
+    let data = node.data;
+    let f = d3.format(".5f");
+    let score = data.score === null ? data.score : f(data.score);
+    let q = data.stats === null ? data.stats : f(d3.max(data.stats));
+    let n = data.stats.length;
+    let shared =
+        `${data.handle}\t` +
+        `${score}\t${q}\t${n}`;
+    if (data.state.type === "revision") {
+        return `${shared}\t${ser_revision(data.state)}`;
+    } else if (data.state.type === "terminal") {
+        return `${shared}\t${ser_terminal(data.state)}`;
+    } else {
+        return "unknown";
     }
 }
 
-function clear_description() {
-    d3.select("#info-box").html("");
+function ser_revision(state) {
+    var trs_string = state.trs.replace('/\n/g', ' ');
+    //return `${state.type}\t${state.n}\t\"${trs_string}\"`;
+    return `\"${trs_string}\"`;
+}
+
+function ser_terminal(state) {
+    var trs_string = state.trs.replace('\n', ' ');
+    return `\"${trs_string}\"`;
+}
+
+function treeify_data(obj, node, move) {
+    if (node === null) {
+        let type = move.pruning === "Hard" ? "failed" : "unvisited";
+        return {
+            "type": type,
+            "move": move,
+            "children": [],
+        };
+    } else {
+        let all_children = [...node.out];
+        node.children = all_children.map(mh => {
+            let new_move = obj.moves[mh];
+            let ch = new_move.child;
+            let new_node = ch === null ? ch : Object.assign({}, obj.nodes[ch]);
+            return treeify_data(obj, new_node, new_move);
+        });
+        node.move = move;
+        node.type = "visited";
+        return node;
+    }
 }
 
 function update(source) {
     const duration = d3.event && d3.event.altKey ? 2500 : 250;
-    const nodes = root.descendants().reverse();
+    const nodes = root.descendants();
     const links = root.links();
 
-    // Compute the new tree layout.
-    tree(root);
+    (() => {
+        let i = 0;
+        root.eachBefore(d => {
+            d.index = i++;
+            d.x = d.depth*nodeSize;
+            d.y = d.index*nodeSize;
+        });
+    })();
 
-    let left = root;
-    let right = root;
-    root.eachBefore(node => {
-        if (node.x < left.x) left = node;
-        if (node.x > right.x) right = node;
-    });
+    let height = nodes.length * nodeSize;
 
-    const height = right.x - left.x + margin.top + margin.bottom;
-
-    const transition = svg.transition()
-          .duration(duration)
-          .attr("viewBox", [-margin.left, left.x - margin.top, width, height])
-          .tween("resize", window.ResizeObserver ? null : () => () => svg.dispatch("toggle"));
+    var transition = d3.transition().duration(duration);
 
     // Update the nodes…
-    const node = gNode.selectAll("g")
-          .data(nodes, d => d.id);
+    let node = gNode.selectAll("g")
+        .data(nodes, d => d.uid);
 
     // Enter any new nodes at the parent's previous position.
-    const nodeEnter = node.enter().append("g")
-          .attr("transform", d => `translate(${source.y0},${source.x0})`)
-          .attr("fill-opacity", 0)
-          .attr("stroke-opacity", 0)
-          .on("click", d => {
-              d.children = d.children ? null : d._children;
-              update(d);
-          });
+    let nodeEnter = node.enter().append("g")
+        .attr("transform", d => `translate(${source.x0},${source.y0})`)
+        .attr("fill-opacity", 0)
+        .attr("stroke-opacity", 0);
 
     nodeEnter.append("circle")
         .attr("r", 2.5)
-        .attr("fill", d => d._children ? "#1b9e77" : (d.data.type === "visited" ? "#333" : "#ddd"))
-        .attr("stroke-width", 10);
+        .attr("fill", d => d._children ? "#1b9e77" : (d.data.type === "visited" ? "#333" : (d.data.type === "failed" ? "#d95f02" : "#ddd")))
+        .attr("stroke-width", 10)
+        .on("click", d => {
+            d.children = d.children ? null : d._children;
+            update(d);
+        });
+
+    nodeEnter.append("text")
+        .attr("dy", "0.32em")
+        .attr("x", d => 6)
+        .html(ser_node);
 
     // Transition nodes to their new position.
-    const nodeUpdate = node.merge(nodeEnter)
-          .on('mouseover', d => describe_node(d))
-          .on('mouseout', () => clear_description())
+    let nodeUpdate = node.merge(nodeEnter)
           .transition(transition)
-          .attr("transform", d => `translate(${d.y},${d.x})`)
+          .attr("transform", d => `translate(${d.x},${d.y})`)
           .attr("fill-opacity", 1)
           .attr("stroke-opacity", 1);
 
     // Transition exiting nodes to the parent's new position.
-    const nodeExit = node.exit().transition(transition).remove()
-          .attr("transform", d => `translate(${source.y},${source.x})`)
+    let nodeExit = node.exit().transition(transition).remove()
+          .attr("transform", d => `translate(${source.x},${source.y})`)
           .attr("fill-opacity", 0)
           .attr("stroke-opacity", 0);
 
     // Update the links…
-    const link = gLink.selectAll("path")
-          .data(links, d => d.target.id);
+    let link = gLink.selectAll("path").data(links, d => d.target.uid);
 
     // Enter any new links at the parent's previous position.
-    const linkEnter = link.enter().append("path")
-          .attr("stroke", d => d.target.data.type === "unvisited" ? "#ddd" : "#555")
-          .attr("d", d => {
-              const o = {x: source.x0, y: source.y0};
-              return diagonal({source: o, target: o});
-          });
+    let linkEnter = link.enter().append("path")
+        .attr("stroke-opacity", 0)
+        .attr("stroke", "#555");
 
     // Transition links to their new position.
     link.merge(linkEnter).transition(transition)
-        .attr("d", diagonal);
+        .attr("stroke-opacity", 1)
+        .attr("d", d => `
+            M${d.source.depth * nodeSize},${d.source.index * nodeSize}
+            V${d.target.index * nodeSize}
+            h${nodeSize}
+          `);
 
     // Transition exiting nodes to the parent's new position.
     link.exit().transition(transition).remove()
-        .attr("d", d => {
-            const o = {x: source.x, y: source.y};
-            return diagonal({source: o, target: o});
-        });
+        .attr("stroke-opacity", 0);
+
+    let max_width = d3.max(gNode.selectAll('text')._groups[0], function(n) {
+        let box = n.getBoundingClientRect();
+        return box.width + box.x;
+    });
+
+    svg.transition().duration(duration)
+        .attr("viewBox", [-20, -20, max_width +20, height + 20])
+        .attr("width", max_width + 40)
+        .tween("resize", window.ResizeObserver ? null : () => () => svg.dispatch("toggle"));
 
     // Stash the old positions for transition.
     root.eachBefore(d => {
         d.x0 = d.x;
         d.y0 = d.y;
     });
+}
+
+function expand(root) {
+    if (root.hasOwnProperty("children") && root.children !== undefined) {
+        root.children.forEach(d => {
+            d.children = d.children === null ? d._children : d.children;
+            expand(d);
+        });
+    }
+}
+
+function collapse(root) {
+    if (root.hasOwnProperty("children") && root.children !== undefined) {
+        root.children = null;
+    }
+    if (root.hasOwnProperty("_children") && root._children !== undefined) {
+        root._children.forEach(n => collapse(n));
+    }
 }
