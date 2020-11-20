@@ -15,7 +15,7 @@ use list_routine_learning_rs::*;
 use polytype::atype::with_ctx;
 use programinduction::{
     trs::{
-        mcts::{MCTSObj, MCTSStateEvaluator, MaxThompsonMoveEvaluator, TRSMCTS},
+        mcts::{MCTSObj, MCTSStateEvaluator, MaxThompsonMoveEvaluator, Move, TRSMCTS},
         Datum as TRSDatum, Lexicon, TRS,
     },
     MCTSManager,
@@ -251,12 +251,12 @@ fn init_out_file(filename: &str, long: bool) -> Result<std::fs::File, String> {
     if long {
         str_err(writeln!(
             fd,
-            "problem,run,order,trial,time,count,lrest,lmeta,lposterior,accuracy,trs"
+            "problem,run,order,trial,time,count,lmeta,ltrs,lgen,lacc,lposterior,accuracy,trs"
         ))?;
     } else {
         str_err(writeln!(
             fd,
-            "problem,run,order,trial,time,count,lrest,lmeta,lposterior,trs"
+            "problem,run,order,trial,time,count,lmeta,ltrs,lgen,lacc,lposterior,trs"
         ))?;
     }
     Ok(fd)
@@ -413,11 +413,16 @@ fn record_hypotheses<'ctx, 'b, R: Rng>(
                     order,
                     trial,
                     &trs,
+                    &h.moves,
                     h.time,
                     h.count,
-                    h.ln_predict_rest,
-                    h.ln_predict_meta,
-                    h.ln_predict_posterior,
+                    &[
+                        h.obj_meta,
+                        h.obj_trs,
+                        h.obj_gen,
+                        h.obj_acc,
+                        h.ln_predict_posterior,
+                    ],
                     None,
                 )
             },
@@ -446,11 +451,16 @@ fn record_hypothesis<'ctx, 'b>(
             order,
             trial,
             &obj.play(mcts).expect("trs"),
+            &obj.moves,
             obj.time,
             obj.count,
-            obj.ln_predict_rest,
-            obj.ln_predict_meta,
-            obj.ln_predict_posterior,
+            &[
+                obj.obj_meta,
+                obj.obj_trs,
+                obj.obj_gen,
+                obj.obj_acc,
+                obj.ln_predict_posterior
+            ],
             correct,
         )
     )
@@ -462,32 +472,23 @@ fn hypothesis_string(
     order: usize,
     trial: usize,
     trs: &TRS,
+    moves: &[Move],
     time: f64,
     count: usize,
-    lprior: f64,
-    llikelihood: f64,
-    lposterior: f64,
+    objective: &[f64],
     correct: Option<bool>,
 ) -> String {
     let trs_str = trs.to_string().lines().join(" ");
+    let objective_string = format!("{:.4}", objective.iter().format(","));
+    let meta_string = format!("{}", moves.iter().format("."));
     match correct {
         None => format!(
-            "\"{}\",{},{},{},{},{},{},{},{},\"{}\"",
-            problem, run, order, trial, time, count, lprior, llikelihood, lposterior, trs_str,
+            "\"{}\",{},{},{},{},{},{},\"{}\",\"{}\"",
+            problem, run, order, trial, time, count, objective_string, trs_str, meta_string,
         ),
         Some(result) => format!(
-            "\"{}\",{},{},{},{},{},{},{},{},{},\"{}\"",
-            problem,
-            run,
-            order,
-            trial,
-            time,
-            count,
-            lprior,
-            llikelihood,
-            lposterior,
-            result,
-            trs_str,
+            "\"{}\",{},{},{},{},{},{},{},\"{}\",\"{}\"",
+            problem, run, order, trial, time, count, objective_string, result, trs_str, meta_string,
         ),
     }
 }
