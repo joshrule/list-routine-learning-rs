@@ -170,30 +170,17 @@ pub fn logsumexp(lps: &[f64]) -> f64 {
 fn process_prediction<'ctx, 'b>(
     mcts: &TRSMCTS<'ctx, 'b>,
     query: &Rule,
-    top_n: &TopN<Box<SimObj<'ctx, 'b>>>,
+    best: &SimObj<'ctx, 'b>,
     params: &Params,
     predictions: &mut Predictions,
 ) -> bool {
     let n_hyps = mcts.hypotheses.len();
     let input = &query.lhs;
     let output = &query.rhs[0];
-    match top_n.least() {
-        None => false,
-        Some(hyp) => {
-            let prediction = make_prediction(&hyp.data.trs, input, params);
-            let correct = prediction == *output;
-            predictions.push((correct as usize, n_hyps, hyp.data.trs.to_string()));
-            correct
-        }
-    }
-}
-
-fn best_so_far<'a, 'b, I, T>(pop: I) -> Option<ScoredItem<T>>
-where
-    I: DoubleEndedIterator<Item = ScoredItem<T>>,
-{
-    pop.rev()
-        .max_by(|x, y| x.score.partial_cmp(&y.score).expect("no NAN"))
+    let prediction = make_prediction(&best.trs, input, params);
+    let correct = prediction == *output;
+    predictions.push((correct as usize, n_hyps, best.trs.to_string()));
+    correct
 }
 
 fn make_prediction<'a, 'b>(trs: &TRS<'a, 'b>, input: &Term, params: &Params) -> Term {
@@ -290,6 +277,7 @@ fn search<'ctx, 'b, R: Rng>(
             params.simulation.top_n,
             rng,
         );
+        println!("\ncurrent topN:");
         top_n.iter().sorted().rev().enumerate().for_each(|(i, h)| {
             println!(
                 "{},{}",
@@ -314,6 +302,7 @@ fn search<'ctx, 'b, R: Rng>(
                 )
             )
         });
+        println!("");
         n_step = manager.step_until(rng, |_| now.elapsed().as_secs_f64() > (timeout as f64));
         manager.tree_mut().mcts_mut().finish_trial();
         let old_best = top_n.least().map(|scored| (*scored.data).clone());
@@ -321,17 +310,22 @@ fn search<'ctx, 'b, R: Rng>(
         for (_, hyp) in manager.tree().mcts().hypotheses.iter() {
             if let Some(obj) = SimObj::try_new(hyp, manager.tree().mcts()) {
                 top_n.add(ScoredItem {
+                    score: -obj.ln_predict_posterior,
                     data: Box::new(obj),
-                    score: hyp.ln_predict_posterior,
                 })
+            } else {
+                println!("FAILED: {}", hyp.count);
             }
         }
         // Make a prediction.
         let query = &data[n_data];
-        let correct = process_prediction(manager.tree().mcts(), query, &top_n, params, predictions);
+        let new_best = top_n.least().map(|scored| (*scored.data).clone()).unwrap();
+        let correct =
+            process_prediction(manager.tree().mcts(), query, &new_best, params, predictions);
         record_hypotheses(
             &manager.tree().mcts().hypotheses,
             old_best,
+            new_best,
             best_fd,
             prediction_fd,
             reservoir,
@@ -374,7 +368,8 @@ fn search<'ctx, 'b, R: Rng>(
 
 fn record_hypotheses<'ctx, 'b, R: Rng>(
     hypotheses: &Arena<Box<MCTSObj<'ctx>>>,
-    best_hyp: Option<SimObj<'ctx, 'b>>,
+    old_best: Option<SimObj<'ctx, 'b>>,
+    new_best: SimObj<'ctx, 'b>,
     best_fd: &mut std::fs::File,
     prediction_fd: &mut std::fs::File,
     reservoir: &mut Reservoir<String>,
@@ -387,7 +382,7 @@ fn record_hypotheses<'ctx, 'b, R: Rng>(
     rng: &mut R,
 ) -> Result<(), String> {
     // best
-    let seed = match best_hyp {
+    let seed = match old_best {
         None => (None, std::f64::NEG_INFINITY),
         Some(ref h) => (None, h.ln_predict_posterior),
     };
@@ -405,7 +400,7 @@ fn record_hypotheses<'ctx, 'b, R: Rng>(
     for (opt, _) in best {
         match opt {
             None => {
-                if let Some(ref hyp) = best_hyp {
+                if let Some(ref hyp) = old_best {
                     str_err(record_simobj(
                         best_fd, problem, run, order, trial, hyp, None,
                     ))?;
@@ -427,21 +422,13 @@ fn record_hypotheses<'ctx, 'b, R: Rng>(
     }
     // predictions
     // TODO: FIXME: This isn't the actual hypothesis we used.
-    let i = best_so_far(hypotheses.iter().map(|(idx, b)| ScoredItem {
-        data: (idx, b),
-        score: b.ln_predict_posterior,
-    }))
-    .unwrap()
-    .data
-    .0;
-    str_err(record_hypothesis(
+    str_err(record_simobj(
         prediction_fd,
         problem,
         run,
         order,
         trial,
-        &hypotheses[i],
-        mcts,
+        &new_best,
         Some(correct),
     ))?;
     // all
@@ -558,11 +545,11 @@ fn hypothesis_string(
     let meta_string = format!("{}", moves.iter().format("."));
     match correct {
         None => format!(
-            "\"{}\",{},{},{},{},{},{},\"{}\",\"{}\"",
+            "\"{}\",{},{},{},{:.9},{},{},\"{}\",\"{}\"",
             problem, run, order, trial, time, count, objective_string, trs_str, meta_string,
         ),
         Some(result) => format!(
-            "\"{}\",{},{},{},{},{},{},{},\"{}\",\"{}\"",
+            "\"{}\",{},{},{},{:.9},{},{},{},\"{}\",\"{}\"",
             problem, run, order, trial, time, count, objective_string, result, trs_str, meta_string,
         ),
     }
@@ -581,6 +568,7 @@ fn update_data<'a, 'b, R: Rng>(
     // 1. Update the top_n.
     for mut h in std::mem::replace(top_n, TopN::new(prune_n)).to_vec() {
         h.data.update_posterior(manager.tree().mcts());
+        h.score = -h.data.ln_predict_posterior;
         top_n.add(h);
     }
 

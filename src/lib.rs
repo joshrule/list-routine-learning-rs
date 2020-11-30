@@ -7,7 +7,7 @@ use programinduction::trs::{
 };
 use rand::Rng;
 use serde_derive::{Deserialize, Serialize};
-use std::{collections::BinaryHeap, fs::read_to_string, path::PathBuf, process::exit};
+use std::{collections::BinaryHeap, fs::read_to_string, ops::Deref, path::PathBuf, process::exit};
 use term_rewriting::{Operator, Rule, RuleContext, Term};
 
 pub fn start_section(s: &str) {
@@ -92,6 +92,18 @@ pub struct Reservoir<T> {
     size: usize,
 }
 
+pub trait Keyed {
+    type Key: Eq;
+    fn key(&self) -> &Self::Key;
+}
+
+impl<T: Keyed> Keyed for Box<T> {
+    type Key = T::Key;
+    fn key(&self) -> &Self::Key {
+        self.deref().key()
+    }
+}
+
 impl<T> ScoredItem<T> {
     pub fn new<R: Rng>(data: T, rng: &mut R) -> Self {
         ScoredItem {
@@ -159,7 +171,7 @@ pub struct TopN<T> {
     pub(crate) data: BinaryHeap<ScoredItem<T>>,
 }
 
-impl<T: Eq> TopN<T> {
+impl<T: Eq + Keyed> TopN<T> {
     pub fn new(size: usize) -> Self {
         TopN {
             size,
@@ -168,22 +180,27 @@ impl<T: Eq> TopN<T> {
     }
     pub fn add(&mut self, datum: ScoredItem<T>) {
         if self.data.len() < self.size {
+            println!("    filling ({}): {:.4}", self.data.len(), datum.score);
             self.data.push(datum);
-        } else if let Some(best) = self.data.peek() {
-            if datum.score > best.score {
-                self.data.pop();
-                self.data.push(datum);
+        } else if let Some(worst) = self.most() {
+            if datum.score < worst.score {
+                println!("    {:.4} < {:.4}", datum.score, worst.score);
+                if self.iter().all(|x| x.data.key() != datum.data.key()) {
+                    println!("    unique");
+                    self.data.pop();
+                    self.data.push(datum);
+                }
             }
         }
-    }
-    pub fn pop(&mut self) -> Option<ScoredItem<T>> {
-        self.data.pop()
     }
     pub fn to_vec(self) -> Vec<ScoredItem<T>> {
         self.data.into_sorted_vec()
     }
+    pub fn most(&self) -> Option<&ScoredItem<T>> {
+        self.data.peek()
+    }
     pub fn least(&self) -> Option<&ScoredItem<T>> {
-        self.data.iter().max()
+        self.data.iter().min()
     }
     pub fn iter<'a>(&'a self) -> TopNIterator<'a, T> {
         TopNIterator(self.data.iter())
@@ -257,6 +274,13 @@ impl<'ctx, 'b> SimObj<'ctx, 'b> {
 }
 
 impl<'ctx, 'b> Eq for SimObj<'ctx, 'b> {}
+
+impl<'ctx, 'b> Keyed for SimObj<'ctx, 'b> {
+    type Key = TRS<'ctx, 'b>;
+    fn key(&self) -> &Self::Key {
+        &self.trs
+    }
+}
 
 #[derive(Deserialize)]
 pub struct Args {
@@ -438,5 +462,78 @@ impl Value {
                 })
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::*;
+
+    fn make_item(n: usize) -> ScoredItem<usize> {
+        ScoredItem {
+            data: n,
+            score: n as f64,
+        }
+    }
+
+    #[test]
+    fn top_n_test() {
+        let mut top_n: TopN<usize> = TopN::new(5);
+
+        // It initializes correctly.
+        assert_eq!(top_n.size, 5);
+        assert_eq!(top_n.data.len(), 0);
+
+        // It can add an item.
+        top_n.add(make_item(6));
+        assert_eq!(top_n.data.len(), 1);
+        assert_eq!(top_n.most().unwrap().data, 6);
+        assert_eq!(top_n.least().unwrap().data, 6);
+
+        // It correctly updates for multiple items.
+        top_n.add(make_item(3));
+        top_n.add(make_item(8));
+        top_n.add(make_item(1));
+        top_n.add(make_item(4));
+
+        assert_eq!(top_n.data.len(), 5);
+        assert_eq!(top_n.most().unwrap().data, 8);
+        assert_eq!(top_n.least().unwrap().data, 1);
+
+        // It correctly handles overflow.
+        top_n.add(make_item(9));
+
+        assert_eq!(top_n.data.len(), 5);
+        assert_eq!(top_n.most().unwrap().data, 8);
+        assert_eq!(top_n.least().unwrap().data, 1);
+
+        top_n.add(make_item(7));
+
+        assert_eq!(top_n.data.len(), 5);
+        assert_eq!(top_n.most().unwrap().data, 7);
+        assert_eq!(top_n.least().unwrap().data, 1);
+
+        top_n.add(make_item(2));
+
+        assert_eq!(top_n.data.len(), 5);
+        assert_eq!(top_n.most().unwrap().data, 6);
+        assert_eq!(top_n.least().unwrap().data, 1);
+
+        top_n.add(make_item(0));
+
+        assert_eq!(top_n.data.len(), 5);
+        assert_eq!(top_n.most().unwrap().data, 4);
+        assert_eq!(top_n.least().unwrap().data, 0);
+
+        top_n.add(make_item(2));
+
+        // We have the expected items at close.
+        let data = top_n
+            .to_vec()
+            .iter()
+            .sorted()
+            .map(|x| x.data)
+            .collect::<Vec<_>>();
+        assert_eq!(data, vec![0, 1, 2, 2, 3]);
     }
 }

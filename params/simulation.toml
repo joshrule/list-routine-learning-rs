@@ -50,7 +50,7 @@ max_size = 100
 
 invent = true
 
-atom_weights = [1.5, 1.5, 1.0, 1.5]
+atom_weights = [1.0, 1.0, 1.0, 1.0]
 
 selection = { "MaxThompson" = { n_top = 10, schedule = { "Logarithmic" = 5 } } }
 
@@ -64,7 +64,7 @@ l_temp = 1.0
 schedule = "None"
 
 # The prior is generative: sample the number of rules and then sample each rule up to that number.
-prior = { "SimpleGenerative" = { p_rule = 0.5, atom_weights = [1.5, 1.5, 1.0, 1.5] } }
+prior = { "SimpleGenerative" = { p_rule = 0.5, atom_weights = [1.0, 1.0, 1.0, 1.0] } }
 
 # The likelihood is generative: rewrite the observed input according to your
 # hypothesis and scale the probability of each computed output by the cost of
@@ -74,4 +74,4 @@ prior = { "SimpleGenerative" = { p_rule = 0.5, atom_weights = [1.5, 1.5, 1.0, 1.
 # - p_insertion = weight1/n_chars
 # - p_incorrect_sub = weight2/n_chars
 # - p_deletion + weight2 + p_correct_sub = 1.0
-likelihood = { decay = 0.9, strategy = "Normal", p_observe= 0.0, max_steps = 25, max_depth = 25, max_size = 200, single = { "List" = { alpha = 0.0001, atom_weights = [1.5, 1.5, 1.0, 1.5], t_max = 10, d_max = 10, dist = { beta = 0.005, p_insertion = 0.001, p_deletion = 0.0025, p_incorrect_sub = { "Bounded" = { low = 0, high = 99, weight = 0.0025}}, p_correct_sub = 0.995 }}}}
+likelihood = { decay = 0.9, strategy = "Normal", p_observe= 0.0, max_steps = 25, max_depth = 25, max_size = 200, single = { "List" = { alpha = 0.0001, atom_weights = [1.0, 1.0, 1.0, 1.0], t_max = 10, d_max = 10, dist = { beta = 0.005, p_insertion = 0.001, p_deletion = 0.0025, p_incorrect_sub = { "Bounded" = { low = 0, high = 99, weight = 0.0025}}, p_correct_sub = 0.995 }}}}
