@@ -1,8 +1,9 @@
 use itertools::Itertools;
 use polytype::atype::TypeContext;
 use programinduction::trs::{
-    mcts::MCTSParams, parse_lexicon, parse_rulecontexts, parse_rules, parse_trs, Lexicon,
-    ModelParams, TRS,
+    mcts::{MCTSObj, MCTSParams, TRSMCTS},
+    parse_lexicon, parse_rulecontexts, parse_rules, parse_trs, Lexicon, ModelParams,
+    SingleLikelihood, TRS,
 };
 use rand::Rng;
 use serde_derive::{Deserialize, Serialize};
@@ -81,34 +82,34 @@ pub fn load_trs<'ctx, 'b>(
     ))
 }
 
-pub struct ReservoirItem<T> {
+pub struct ScoredItem<T> {
     pub score: f64,
     pub data: T,
 }
 
 pub struct Reservoir<T> {
-    data: BinaryHeap<ReservoirItem<T>>,
+    data: BinaryHeap<ScoredItem<T>>,
     size: usize,
 }
 
-impl<T> ReservoirItem<T> {
+impl<T> ScoredItem<T> {
     pub fn new<R: Rng>(data: T, rng: &mut R) -> Self {
-        ReservoirItem {
+        ScoredItem {
             data,
             score: rng.gen(),
         }
     }
 }
 
-impl<T: Eq> PartialEq for ReservoirItem<T> {
+impl<T: Eq> PartialEq for ScoredItem<T> {
     fn eq(&self, other: &Self) -> bool {
         self.score == other.score && self.data == other.data
     }
 }
 
-impl<T: Eq> Eq for ReservoirItem<T> {}
+impl<T: Eq> Eq for ScoredItem<T> {}
 
-impl<T: Eq> PartialOrd for ReservoirItem<T> {
+impl<T: Eq> PartialOrd for ScoredItem<T> {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         Some(
             self.score
@@ -118,7 +119,7 @@ impl<T: Eq> PartialOrd for ReservoirItem<T> {
     }
 }
 
-impl<T: Eq> Ord for ReservoirItem<T> {
+impl<T: Eq> Ord for ScoredItem<T> {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         self.partial_cmp(&other).expect("ordering")
     }
@@ -136,22 +137,126 @@ impl<T: Eq> Reservoir<T> {
         F: Fn() -> T,
     {
         if self.data.len() < self.size {
-            self.data.push(ReservoirItem::new(f(), rng));
+            self.data.push(ScoredItem::new(f(), rng));
         } else if let Some(best) = self.data.peek() {
             let item_score = rng.gen();
             if item_score < best.score {
                 self.data.pop();
-                self.data.push(ReservoirItem {
+                self.data.push(ScoredItem {
                     score: item_score,
                     data: f(),
                 });
             }
         }
     }
-    pub fn to_vec(self) -> Vec<ReservoirItem<T>> {
+    pub fn to_vec(self) -> Vec<ScoredItem<T>> {
         self.data.into_sorted_vec()
     }
 }
+
+pub struct TopN<T> {
+    pub(crate) size: usize,
+    pub(crate) data: BinaryHeap<ScoredItem<T>>,
+}
+
+impl<T: Eq> TopN<T> {
+    pub fn new(size: usize) -> Self {
+        TopN {
+            size,
+            data: BinaryHeap::with_capacity(size),
+        }
+    }
+    pub fn add(&mut self, datum: ScoredItem<T>) {
+        if self.data.len() < self.size {
+            self.data.push(datum);
+        } else if let Some(best) = self.data.peek() {
+            if datum.score > best.score {
+                self.data.pop();
+                self.data.push(datum);
+            }
+        }
+    }
+    pub fn pop(&mut self) -> Option<ScoredItem<T>> {
+        self.data.pop()
+    }
+    pub fn to_vec(self) -> Vec<ScoredItem<T>> {
+        self.data.into_sorted_vec()
+    }
+    pub fn least(&self) -> Option<&ScoredItem<T>> {
+        self.data.iter().max()
+    }
+    pub fn iter<'a>(&'a self) -> TopNIterator<'a, T> {
+        TopNIterator(self.data.iter())
+    }
+}
+
+pub struct TopNIterator<'a, T>(std::collections::binary_heap::Iter<'a, ScoredItem<T>>);
+
+impl<'a, T> Iterator for TopNIterator<'a, T> {
+    type Item = &'a ScoredItem<T>;
+    fn next(&mut self) -> Option<Self::Item> {
+        self.0.next()
+    }
+}
+
+#[derive(Clone, PartialEq)]
+pub struct SimObj<'ctx, 'b> {
+    pub time: f64,
+    pub count: usize,
+    pub trs: TRS<'ctx, 'b>,
+    pub obj_meta: f64,
+    pub obj_trs: f64,
+    pub obj_acc: f64,
+    pub obj_gen: f64,
+    pub ln_search_prior: f64,
+    pub ln_search_likelihood: f64,
+    pub ln_search_posterior: f64,
+    pub ln_predict_prior: f64,
+    pub ln_predict_likelihood: f64,
+    pub ln_predict_posterior: f64,
+}
+
+impl<'ctx, 'b> SimObj<'ctx, 'b> {
+    pub fn try_new(obj: &MCTSObj<'ctx>, mcts: &TRSMCTS<'ctx, 'b>) -> Option<Self> {
+        obj.play(mcts).map(|trs| SimObj {
+            time: obj.time,
+            count: obj.count,
+            trs,
+            obj_meta: obj.obj_meta,
+            obj_trs: obj.obj_trs,
+            obj_acc: obj.obj_acc,
+            obj_gen: obj.obj_gen,
+            ln_search_prior: obj.ln_search_prior,
+            ln_search_likelihood: obj.ln_search_likelihood,
+            ln_search_posterior: obj.ln_search_posterior,
+            ln_predict_prior: obj.ln_predict_prior,
+            ln_predict_likelihood: obj.ln_predict_likelihood,
+            ln_predict_posterior: obj.ln_predict_posterior,
+        })
+    }
+    /// Note: This method explicitly ignores any change in the meta-prior that might occur with new trials.
+    pub fn update_posterior(&mut self, mcts: &TRSMCTS<'ctx, 'b>) {
+        // Get the new likelihoods.
+        let mut l1 = mcts.model.likelihood;
+        l1.single = SingleLikelihood::Generalization(0.001);
+        let mut l2 = mcts.model.likelihood;
+        l2.single = SingleLikelihood::Generalization(0.0);
+        let soft_generalization_likelihood = self.trs.log_likelihood(mcts.data, l1);
+        self.obj_gen = self.trs.log_likelihood(mcts.data, l2);
+        self.obj_acc = self.trs.log_likelihood(mcts.data, mcts.model.likelihood);
+
+        // update the posterior values.
+        self.ln_search_likelihood = self.obj_acc + soft_generalization_likelihood;
+        self.ln_search_posterior = self.ln_search_prior * mcts.model.p_temp
+            + self.ln_search_likelihood * mcts.model.l_temp;
+        // After HL finds a meta-program, it doesn't care how it found it.
+        self.ln_predict_likelihood = self.obj_acc + self.obj_gen;
+        self.ln_predict_posterior = self.ln_predict_prior * mcts.model.p_temp
+            + self.ln_predict_likelihood * mcts.model.l_temp;
+    }
+}
+
+impl<'ctx, 'b> Eq for SimObj<'ctx, 'b> {}
 
 #[derive(Deserialize)]
 pub struct Args {
