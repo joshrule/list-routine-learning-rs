@@ -1,7 +1,7 @@
 use itertools::Itertools;
 use polytype::atype::TypeContext;
 use programinduction::trs::{
-    mcts::{MCTSObj, MCTSParams, TRSMCTS},
+    mcts::{MCTSObj, MCTSParams, Move, TRSMCTS},
     parse_lexicon, parse_rulecontexts, parse_rules, parse_trs, Lexicon, ModelParams,
     SingleLikelihood, TRS,
 };
@@ -180,13 +180,10 @@ impl<T: Eq + Keyed> TopN<T> {
     }
     pub fn add(&mut self, datum: ScoredItem<T>) {
         if self.data.len() < self.size {
-            println!("    filling ({}): {:.4}", self.data.len(), datum.score);
             self.data.push(datum);
         } else if let Some(worst) = self.most() {
             if datum.score < worst.score {
-                println!("    {:.4} < {:.4}", datum.score, worst.score);
                 if self.iter().all(|x| x.data.key() != datum.data.key()) {
-                    println!("    unique");
                     self.data.pop();
                     self.data.push(datum);
                 }
@@ -218,37 +215,15 @@ impl<'a, T> Iterator for TopNIterator<'a, T> {
 
 #[derive(Clone, PartialEq)]
 pub struct SimObj<'ctx, 'b> {
-    pub time: f64,
-    pub count: usize,
+    pub hyp: MCTSObj<'ctx>,
     pub trs: TRS<'ctx, 'b>,
-    pub obj_meta: f64,
-    pub obj_trs: f64,
-    pub obj_acc: f64,
-    pub obj_gen: f64,
-    pub ln_search_prior: f64,
-    pub ln_search_likelihood: f64,
-    pub ln_search_posterior: f64,
-    pub ln_predict_prior: f64,
-    pub ln_predict_likelihood: f64,
-    pub ln_predict_posterior: f64,
 }
 
 impl<'ctx, 'b> SimObj<'ctx, 'b> {
-    pub fn try_new(obj: &MCTSObj<'ctx>, mcts: &TRSMCTS<'ctx, 'b>) -> Option<Self> {
-        obj.play(mcts).map(|trs| SimObj {
-            time: obj.time,
-            count: obj.count,
+    pub fn try_new(hyp: &MCTSObj<'ctx>, mcts: &TRSMCTS<'ctx, 'b>) -> Option<Self> {
+        hyp.play(mcts).map(|trs| SimObj {
+            hyp: hyp.clone(),
             trs,
-            obj_meta: obj.obj_meta,
-            obj_trs: obj.obj_trs,
-            obj_acc: obj.obj_acc,
-            obj_gen: obj.obj_gen,
-            ln_search_prior: obj.ln_search_prior,
-            ln_search_likelihood: obj.ln_search_likelihood,
-            ln_search_posterior: obj.ln_search_posterior,
-            ln_predict_prior: obj.ln_predict_prior,
-            ln_predict_likelihood: obj.ln_predict_likelihood,
-            ln_predict_posterior: obj.ln_predict_posterior,
         })
     }
     /// Note: This method explicitly ignores any change in the meta-prior that might occur with new trials.
@@ -259,26 +234,26 @@ impl<'ctx, 'b> SimObj<'ctx, 'b> {
         let mut l2 = mcts.model.likelihood;
         l2.single = SingleLikelihood::Generalization(0.0);
         let soft_generalization_likelihood = self.trs.log_likelihood(mcts.data, l1);
-        self.obj_gen = self.trs.log_likelihood(mcts.data, l2);
-        self.obj_acc = self.trs.log_likelihood(mcts.data, mcts.model.likelihood);
+        self.hyp.obj_gen = self.trs.log_likelihood(mcts.data, l2);
+        self.hyp.obj_acc = self.trs.log_likelihood(mcts.data, mcts.model.likelihood);
 
         // update the posterior values.
-        self.ln_search_likelihood = self.obj_acc + soft_generalization_likelihood;
-        self.ln_search_posterior = self.ln_search_prior * mcts.model.p_temp
-            + self.ln_search_likelihood * mcts.model.l_temp;
+        self.hyp.ln_search_likelihood = self.hyp.obj_acc + soft_generalization_likelihood;
+        self.hyp.ln_search_posterior = self.hyp.ln_search_prior * mcts.model.p_temp
+            + self.hyp.ln_search_likelihood * mcts.model.l_temp;
         // After HL finds a meta-program, it doesn't care how it found it.
-        self.ln_predict_likelihood = self.obj_acc + self.obj_gen;
-        self.ln_predict_posterior = self.ln_predict_prior * mcts.model.p_temp
-            + self.ln_predict_likelihood * mcts.model.l_temp;
+        self.hyp.ln_predict_likelihood = self.hyp.obj_acc + self.hyp.obj_gen;
+        self.hyp.ln_predict_posterior = self.hyp.ln_predict_prior * mcts.model.p_temp
+            + self.hyp.ln_predict_likelihood * mcts.model.l_temp;
     }
 }
 
 impl<'ctx, 'b> Eq for SimObj<'ctx, 'b> {}
 
 impl<'ctx, 'b> Keyed for SimObj<'ctx, 'b> {
-    type Key = TRS<'ctx, 'b>;
+    type Key = Vec<Move<'ctx>>;
     fn key(&self) -> &Self::Key {
-        &self.trs
+        &self.hyp.moves
     }
 }
 
@@ -469,16 +444,26 @@ impl Value {
 mod tests {
     use crate::*;
 
-    fn make_item(n: usize) -> ScoredItem<usize> {
+    #[derive(PartialEq, Eq, PartialOrd, Ord, Debug)]
+    struct Int(usize);
+
+    impl Keyed for Int {
+        type Key = usize;
+        fn key(&self) -> &Self::Key {
+            &self.0
+        }
+    }
+
+    fn make_item(n: usize) -> ScoredItem<Int> {
         ScoredItem {
-            data: n,
+            data: Int(n),
             score: n as f64,
         }
     }
 
     #[test]
     fn top_n_test() {
-        let mut top_n: TopN<usize> = TopN::new(5);
+        let mut top_n: TopN<Int> = TopN::new(5);
 
         // It initializes correctly.
         assert_eq!(top_n.size, 5);
@@ -487,8 +472,8 @@ mod tests {
         // It can add an item.
         top_n.add(make_item(6));
         assert_eq!(top_n.data.len(), 1);
-        assert_eq!(top_n.most().unwrap().data, 6);
-        assert_eq!(top_n.least().unwrap().data, 6);
+        assert_eq!(top_n.most().unwrap().data, Int(6));
+        assert_eq!(top_n.least().unwrap().data, Int(6));
 
         // It correctly updates for multiple items.
         top_n.add(make_item(3));
@@ -497,33 +482,33 @@ mod tests {
         top_n.add(make_item(4));
 
         assert_eq!(top_n.data.len(), 5);
-        assert_eq!(top_n.most().unwrap().data, 8);
-        assert_eq!(top_n.least().unwrap().data, 1);
+        assert_eq!(top_n.most().unwrap().data.0, 8);
+        assert_eq!(top_n.least().unwrap().data.0, 1);
 
         // It correctly handles overflow.
         top_n.add(make_item(9));
 
         assert_eq!(top_n.data.len(), 5);
-        assert_eq!(top_n.most().unwrap().data, 8);
-        assert_eq!(top_n.least().unwrap().data, 1);
+        assert_eq!(top_n.most().unwrap().data.0, 8);
+        assert_eq!(top_n.least().unwrap().data.0, 1);
 
         top_n.add(make_item(7));
 
         assert_eq!(top_n.data.len(), 5);
-        assert_eq!(top_n.most().unwrap().data, 7);
-        assert_eq!(top_n.least().unwrap().data, 1);
+        assert_eq!(top_n.most().unwrap().data.0, 7);
+        assert_eq!(top_n.least().unwrap().data.0, 1);
 
         top_n.add(make_item(2));
 
         assert_eq!(top_n.data.len(), 5);
-        assert_eq!(top_n.most().unwrap().data, 6);
-        assert_eq!(top_n.least().unwrap().data, 1);
+        assert_eq!(top_n.most().unwrap().data.0, 6);
+        assert_eq!(top_n.least().unwrap().data.0, 1);
 
         top_n.add(make_item(0));
 
         assert_eq!(top_n.data.len(), 5);
-        assert_eq!(top_n.most().unwrap().data, 4);
-        assert_eq!(top_n.least().unwrap().data, 0);
+        assert_eq!(top_n.most().unwrap().data.0, 4);
+        assert_eq!(top_n.least().unwrap().data.0, 0);
 
         top_n.add(make_item(2));
 
@@ -532,7 +517,7 @@ mod tests {
             .to_vec()
             .iter()
             .sorted()
-            .map(|x| x.data)
+            .map(|x| x.data.0)
             .collect::<Vec<_>>();
         assert_eq!(data, vec![0, 1, 2, 2, 3]);
     }

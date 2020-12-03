@@ -288,15 +288,15 @@ fn search<'ctx, 'b, R: Rng>(
                     order,
                     n_data + 1,
                     &h.data.trs,
-                    &[],
-                    h.data.time,
-                    h.data.count,
+                    &h.data.hyp.moves,
+                    h.data.hyp.time,
+                    h.data.hyp.count,
                     &[
-                        h.data.obj_meta,
-                        h.data.obj_trs,
-                        h.data.obj_gen,
-                        h.data.obj_acc,
-                        h.data.ln_predict_posterior,
+                        h.data.hyp.obj_meta,
+                        h.data.hyp.obj_trs,
+                        h.data.hyp.obj_gen,
+                        h.data.hyp.obj_acc,
+                        h.data.hyp.ln_predict_posterior,
                     ],
                     None,
                 )
@@ -310,7 +310,7 @@ fn search<'ctx, 'b, R: Rng>(
         for (_, hyp) in manager.tree().mcts().hypotheses.iter() {
             if let Some(obj) = SimObj::try_new(hyp, manager.tree().mcts()) {
                 top_n.add(ScoredItem {
-                    score: -obj.ln_predict_posterior,
+                    score: -obj.hyp.ln_predict_posterior,
                     data: Box::new(obj),
                 })
             } else {
@@ -384,7 +384,7 @@ fn record_hypotheses<'ctx, 'b, R: Rng>(
     // best
     let seed = match old_best {
         None => (None, std::f64::NEG_INFINITY),
-        Some(ref h) => (None, h.ln_predict_posterior),
+        Some(ref h) => (None, h.hyp.ln_predict_posterior),
     };
     let best =
         hypotheses
@@ -479,15 +479,15 @@ fn record_simobj<'ctx, 'b>(
             order,
             trial,
             &obj.trs,
-            &[],
-            obj.time,
-            obj.count,
+            &obj.hyp.moves,
+            obj.hyp.time,
+            obj.hyp.count,
             &[
-                obj.obj_meta,
-                obj.obj_trs,
-                obj.obj_gen,
-                obj.obj_acc,
-                obj.ln_predict_posterior
+                obj.hyp.obj_meta,
+                obj.hyp.obj_trs,
+                obj.hyp.obj_gen,
+                obj.hyp.obj_acc,
+                obj.hyp.ln_predict_posterior
             ],
             correct,
         )
@@ -568,38 +568,25 @@ fn update_data<'a, 'b, R: Rng>(
     // 1. Update the top_n.
     for mut h in std::mem::replace(top_n, TopN::new(prune_n)).to_vec() {
         h.data.update_posterior(manager.tree().mcts());
-        h.score = -h.data.ln_predict_posterior;
+        h.score = -h.data.hyp.ln_predict_posterior;
         top_n.add(h);
     }
 
-    // 2. Get paths from top MCTSobjs.
-    let paths = manager
-        .tree()
-        .mcts()
-        .hypotheses
-        .iter()
-        .rev()
-        .map(|(_, n)| n)
-        .sorted_by(|a, b| {
-            a.ln_predict_posterior
-                .partial_cmp(&b.ln_predict_posterior)
-                .unwrap_or(Ordering::Equal)
-        })
-        .filter(|n| n.play(manager.tree().mcts()).is_some())
-        .map(|n| n.moves.clone())
-        .unique()
-        .take(prune_n)
-        .collect_vec();
-
-    // 3. Reset the MCTS store.
-    // TODO: this doesn't feel semantically very clean. Refactor.
+    // 2. Reset the MCTS store.
     manager.tree_mut().mcts_mut().clear();
     let root_state = manager.tree_mut().mcts_mut().root();
 
-    // 4. Clear the tree store.
+    // 3. Prune the tree store.
+    let paths = top_n
+        .iter()
+        .sorted()
+        .rev()
+        .filter(|h| h.data.hyp.test_path(manager.tree().mcts()))
+        .map(|h| h.data.hyp.moves.clone())
+        .collect_vec();
     manager
         .tree_mut()
-        .prune_except_top(paths.into_iter(), root_state, rng);
+        .prune_except(paths.into_iter(), root_state, rng);
 }
 
 fn make_manager<'ctx, 'b, R: Rng>(
