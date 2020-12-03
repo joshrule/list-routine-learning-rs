@@ -27,9 +27,3 @@ toml = "0.5"
 
 [profile.release]
 lto = "fat"
-
-[patch.crates-io]
-term_rewriting = { path = "../../../term-rewriting-rs" }
-programinduction = { path = "../../../program-induction" }
-polytype = { path = "../../../polytype-rs" }
-
