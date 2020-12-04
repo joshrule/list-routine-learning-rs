@@ -225,12 +225,12 @@ fn init_out_file(filename: &str, long: bool) -> Result<std::fs::File, String> {
     if long {
         str_err(writeln!(
             fd,
-            "problem,run,order,trial,time,count,lmeta,ltrs,lgen,lacc,lposterior,accuracy,trs"
+            "problem,run,order,trial,time,count,lmeta,ltrs,lgen,lacc,lposterior,accuracy,trs,metaprogram"
         ))?;
     } else {
         str_err(writeln!(
             fd,
-            "problem,run,order,trial,time,count,lmeta,ltrs,lgen,lacc,lposterior,trs"
+            "problem,run,order,trial,time,count,lmeta,ltrs,lgen,lacc,lposterior,trs,metaprogram"
         ))?;
     }
     Ok(fd)
