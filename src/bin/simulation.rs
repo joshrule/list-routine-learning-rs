@@ -219,6 +219,7 @@ fn hypothesis_string(problem: &str, order: usize, h: &SimObj) -> String {
             h.hyp.obj_gen,
             h.hyp.obj_acc,
             h.hyp.ln_predict_posterior,
+            h.hyp.ln_search_posterior,
         ],
         None,
     )
