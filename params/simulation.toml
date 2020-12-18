@@ -52,7 +52,7 @@ invent = true
 
 atom_weights = [1.0, 1.0, 1.0, 1.0]
 
-selection = { "MaxThompson" = { n_top = 10, schedule = { "Logarithmic" = 5 } } }
+selection = { "MaxThompson" = { n_top = 10, schedule = { "Logarithmic" = { 0 = 150, 1 = 30 } } } }
 
 [model]
 
