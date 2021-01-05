@@ -164,7 +164,8 @@ fn search<'ctx, 'b, R: Rng>(
         if let Some(obj) = SimObj::try_new(hyp, manager.tree().mcts()) {
             print_hypothesis(problem, order, &obj);
             top_n.add(ScoredItem {
-                score: -obj.hyp.ln_predict_posterior,
+                // TODO: a hack to use meta-program prior for tie-breaking.
+                score: -obj.hyp.ln_posterior - obj.hyp.ln_meta / 100.0,
                 data: Box::new(obj),
             })
         } else {
@@ -214,12 +215,12 @@ fn hypothesis_string(problem: &str, order: usize, h: &SimObj) -> String {
         h.hyp.time,
         h.hyp.count,
         &[
-            h.hyp.obj_meta,
-            h.hyp.obj_trs,
-            h.hyp.obj_gen,
-            h.hyp.obj_acc,
-            h.hyp.ln_predict_posterior,
-            h.hyp.ln_search_posterior,
+            h.hyp.ln_meta,
+            h.hyp.ln_trs,
+            h.hyp.ln_wf,
+            h.hyp.ln_acc,
+            h.hyp.ln_posterior,
+            h.hyp.ln_posterior,
         ],
         None,
     )
@@ -263,7 +264,8 @@ fn update_data<'a, 'b, R: Rng>(
     // 1. Update the top_n.
     for mut h in std::mem::replace(top_n, TopN::new(prune_n)).to_vec() {
         h.data.update_posterior(manager.tree().mcts());
-        h.score = -h.data.hyp.ln_predict_posterior;
+        // TODO: a hack to use meta-program prior for tie-breaking.
+        h.score = -h.data.hyp.ln_posterior - h.data.hyp.ln_meta / 100.0;
         top_n.add(h);
     }
 

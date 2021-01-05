@@ -229,22 +229,15 @@ impl<'ctx, 'b> SimObj<'ctx, 'b> {
     /// Note: This method explicitly ignores any change in the meta-prior that might occur with new trials.
     pub fn update_posterior(&mut self, mcts: &TRSMCTS<'ctx, 'b>) {
         // Get the new likelihoods.
-        let mut l1 = mcts.model.likelihood;
-        l1.single = SingleLikelihood::Generalization(0.001);
         let mut l2 = mcts.model.likelihood;
         l2.single = SingleLikelihood::Generalization(0.0);
-        let soft_generalization_likelihood = self.trs.log_likelihood(mcts.data, l1);
-        self.hyp.obj_gen = self.trs.log_likelihood(mcts.data, l2);
-        self.hyp.obj_acc = self.trs.log_likelihood(mcts.data, mcts.model.likelihood);
+        self.hyp.ln_wf = self.trs.log_likelihood(mcts.data, l2);
+        self.hyp.ln_acc = self.trs.log_likelihood(mcts.data, mcts.model.likelihood);
 
-        // update the posterior values.
-        self.hyp.ln_search_likelihood = self.hyp.obj_acc + soft_generalization_likelihood;
-        self.hyp.ln_search_posterior = self.hyp.ln_search_prior * mcts.model.p_temp
-            + self.hyp.ln_search_likelihood * mcts.model.l_temp;
         // After HL finds a meta-program, it doesn't care how it found it.
-        self.hyp.ln_predict_likelihood = self.hyp.obj_acc + self.hyp.obj_gen;
-        self.hyp.ln_predict_posterior = self.hyp.ln_predict_prior * mcts.model.p_temp
-            + self.hyp.ln_predict_likelihood * mcts.model.l_temp;
+        self.hyp.ln_likelihood = self.hyp.ln_acc + self.hyp.ln_wf;
+        self.hyp.ln_posterior =
+            self.hyp.ln_prior * mcts.model.p_temp + self.hyp.ln_likelihood * mcts.model.l_temp;
     }
 }
 
