@@ -10,6 +10,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "atomic-counter"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "62f447d68cfa5a9ab0c1c862a703da2a65b5ed1b7ce1153c9eb0169506d56019"
+
+[[package]]
 name = "autocfg"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -284,7 +290,9 @@ dependencies = [
 name = "programinduction"
 version = "0.8.0"
 dependencies = [
+ "atomic-counter",
  "crossbeam-channel 0.3.9",
+ "crossbeam-utils 0.8.1",
  "generational-arena",
  "itertools",
  "lazy_static",

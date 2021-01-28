@@ -35,7 +35,7 @@ fn main() {
             _best_filename,
             _prediction_filename,
             _all_filename,
-            _out_filename,
+            out_filename,
         ) = exit_err(load_args(), "Failed to load parameters");
         notice("loaded parameters", 0);
 
@@ -86,6 +86,7 @@ fn main() {
                 &data[..params.simulation.n_predictions],
                 &mut params.clone(),
                 (&problem, order),
+                &out_filename,
                 rng,
             ),
             "search failed",
@@ -146,6 +147,7 @@ fn search<'ctx, 'b, R: Rng>(
     examples: &'b [Rule],
     params: &mut Params,
     (problem, order): (&str, usize),
+    out_filename: &str,
     rng: &mut R,
 ) -> Result<f64, String> {
     let mut top_n = TopN::new(params.simulation.top_n);
@@ -160,6 +162,7 @@ fn search<'ctx, 'b, R: Rng>(
     let n_steps = manager.step_until(rng, |_| now.elapsed().as_secs_f64() > (timeout as f64));
     manager.tree_mut().mcts_mut().finish_trial();
     let n_hyps = manager.tree().mcts().hypotheses.len();
+    println!("# END OF SEARCH");
     for (_, hyp) in manager.tree().mcts().hypotheses.iter() {
         if let Some(obj) = SimObj::try_new(hyp, manager.tree().mcts()) {
             print_hypothesis(problem, order, &obj);
@@ -184,6 +187,7 @@ fn search<'ctx, 'b, R: Rng>(
     println!("# steps: {}", n_steps);
     println!("# nodes: {}", manager.tree().tree().tree_size());
     println!("# hypotheses: {}", n_hyps);
+    manager.tree().to_file(out_filename).expect("wrote tree");
     Ok(manager.tree().mcts().search_time)
 }
 
