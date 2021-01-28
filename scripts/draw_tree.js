@@ -4,6 +4,8 @@ var width = window.innerWidth,
     root = d3.hierarchy(treeify_data(data, data.nodes[data.root], {move: "Empty", pruning: "None"})),
     best = -Infinity;
 
+// get the number of visited nodes at each depth
+// _.countBy(root.descendants().filter(n => n.data.type == "visited").map(n => n.depth), x => x)
 
 let uid = 0;
 root.descendants().reverse().forEach(d => {
@@ -19,19 +21,21 @@ root.descendants().reverse().forEach(d => {
             } else if (!y.data.hasOwnProperty("stats")) {
                 return -1;
             } else {
-                return y.data.stats.length - x.data.stats.length;
+                return y.data.stats.q - x.data.stats.q;
             }
         });
     }
-    // toggle children off
+    // Toggle children off.
     d._children = d.children;
     if (d.depth) d.children = null;
-    // collect the best child
+    // Collect the best child.
     if (d.data.score !== null && d.data.score > best) best = d.data.score;
-    // correct scores mangled by JSON
+    // Correct scores mangled by JSON.
     if (d.data.score === null && d.data.state.playout !== "untried") {
         d.data.score = -Infinity;
-        d.data.q = -Infinity;
+    }
+    if (d.data.hasOwnProperty("state") && d.data.state.playout !== "untried" && d.data.stats.q === null) {
+        d.data.stats.q = -Infinity;
     }
 });
 root.x0 = 0;
@@ -87,10 +91,10 @@ function logsumexp(scores) {
 
 function ser_visited(node) {
     let data = node.data;
-    let f = d3.format(".5f");
+    let f = d3.format(".4f");
     let score = data.score === null ? data.score : f(data.score);
-    let q = data.stats === null ? data.stats : f(d3.max(data.stats));
-    let n = data.stats.length;
+    let q = data.stats.q === null ? -Infinity : f(data.stats.q);
+    let n = data.stats.n;
     let shared =
         `${data.handle}\t` +
         `${score}\t${q}\t${n}`;
@@ -104,8 +108,7 @@ function ser_visited(node) {
 }
 
 function ser_revision(state) {
-    var trs_string = state.trs.replace('/\n/g', ' ');
-    //return `${state.type}\t${state.n}\t\"${trs_string}\"`;
+    var trs_string = state.playout.replace('/\n/g', ' ');
     return `\"${trs_string}\"`;
 }
 
@@ -230,6 +233,9 @@ function update(source) {
 }
 
 function expand(root) {
+    if (root.hasOwnProperty("_children") && root.hasOwnProperty("children") && root.children == undefined) {
+        root.children = root._children;
+    }
     if (root.hasOwnProperty("children") && root.children !== undefined) {
         root.children.forEach(d => {
             d.children = d.children === null ? d._children : d.children;
