@@ -1,7 +1,8 @@
 use itertools::Itertools;
 use polytype::atype::TypeContext;
 use programinduction::trs::{
-    mcts::{MCTSObj, MCTSParams, Move, TRSMCTS},
+    mcts::{MCTSObj, MCTSParams, TRSMCTS},
+    metaprogram::{MetaProgramControl, Move},
     parse_lexicon, parse_rulecontexts, parse_rules, parse_trs, Lexicon, ModelParams,
     SingleLikelihood, TRS,
 };
@@ -227,17 +228,17 @@ impl<'ctx, 'b> SimObj<'ctx, 'b> {
         })
     }
     /// Note: This method explicitly ignores any change in the meta-prior that might occur with new trials.
-    pub fn update_posterior(&mut self, mcts: &TRSMCTS<'ctx, 'b>) {
+    pub fn update_posterior(&mut self, ctl: &MetaProgramControl<'b>) {
         // Get the new likelihoods.
-        let mut l2 = mcts.model.likelihood;
+        let mut l2 = ctl.model.likelihood;
         l2.single = SingleLikelihood::Generalization(0.0);
-        self.hyp.ln_wf = self.trs.log_likelihood(mcts.data, l2);
-        self.hyp.ln_acc = self.trs.log_likelihood(mcts.data, mcts.model.likelihood);
+        self.hyp.ln_wf = self.trs.log_likelihood(ctl.data, l2);
+        self.hyp.ln_acc = self.trs.log_likelihood(ctl.data, ctl.model.likelihood);
 
         // After HL finds a meta-program, it doesn't care how it found it.
         self.hyp.ln_likelihood = self.hyp.ln_acc + self.hyp.ln_wf;
         self.hyp.ln_posterior =
-            self.hyp.ln_prior * mcts.model.p_temp + self.hyp.ln_likelihood * mcts.model.l_temp;
+            self.hyp.ln_prior * ctl.model.p_temp + self.hyp.ln_likelihood * ctl.model.l_temp;
     }
 }
 

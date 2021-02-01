@@ -13,11 +13,14 @@ use itertools::Itertools;
 use list_routine_learning_rs::*;
 use polytype::atype::with_ctx;
 use programinduction::{
+    hypotheses::Bayesable,
+    inference::{Control, MCMCChain},
+    mcts::MCTSManager,
     trs::{
-        mcts::{BestInSubtreeMoveEvaluator, MCTSStateEvaluator, Move, TRSMCTS},
+        mcts::{BestInSubtreeMoveEvaluator, MCTSStateEvaluator, TRSMCTS},
+        metaprogram::{MetaProgram, MetaProgramControl, MetaProgramHypothesis, Move, State},
         Datum as TRSDatum, Lexicon, TRS,
     },
-    MCTSManager,
 };
 use rand::{thread_rng, Rng};
 use regex::Regex;
@@ -79,14 +82,25 @@ fn main() {
 
         notice("searching", 0);
         println!("problem,run,order,trial,steps,tree,hypotheses,search_time,total_time");
+        //let search_time = exit_err(
+        //    search(
+        //        lex.clone(),
+        //        &background,
+        //        &data[..params.simulation.n_predictions],
+        //        &mut params.clone(),
+        //        (&problem, order),
+        //        &out_filename,
+        //        rng,
+        //    ),
+        //    "search failed",
+        //);
         let search_time = exit_err(
-            search(
+            search_mcmc(
                 lex.clone(),
                 &background,
                 &data[..params.simulation.n_predictions],
                 &mut params.clone(),
                 (&problem, order),
-                &out_filename,
                 rng,
             ),
             "search failed",
@@ -158,7 +172,13 @@ fn search<'ctx, 'b, R: Rng>(
     let now = Instant::now();
     let n_prune = params.simulation.top_n;
     manager.tree_mut().mcts_mut().start_trial();
-    update_data(&mut manager, &mut top_n, &borrowed_data, n_prune, rng);
+    update_data(
+        manager.tree_mut().mcts_mut(),
+        &mut top_n,
+        &borrowed_data,
+        n_prune,
+    );
+    prune_tree(&mut manager, &mut top_n, rng);
     let n_steps = manager.step_until(rng, |_| now.elapsed().as_secs_f64() > (timeout as f64));
     manager.tree_mut().mcts_mut().finish_trial();
     let n_hyps = manager.tree().mcts().hypotheses.len();
@@ -191,6 +211,78 @@ fn search<'ctx, 'b, R: Rng>(
     Ok(manager.tree().mcts().search_time)
 }
 
+#[derive(Clone, PartialEq, Eq)]
+pub struct MetaProgramHypothesisWrapper<'ctx, 'b>(MetaProgramHypothesis<'ctx, 'b>);
+
+impl<'ctx, 'b> Keyed for MetaProgramHypothesisWrapper<'ctx, 'b> {
+    type Key = State<'ctx, 'b>;
+    fn key(&self) -> &Self::Key {
+        &self.0.state
+    }
+}
+
+fn search_mcmc<'ctx, 'b, R: Rng>(
+    lex: Lexicon<'ctx, 'b>,
+    background: &'b [Rule],
+    examples: &'b [Rule],
+    params: &mut Params,
+    (problem, order): (&str, usize),
+    rng: &mut R,
+) -> Result<f64, String> {
+    println!("# problem,order,time,count,ln_meta,ln_trs,ln_wf,ln_acc,ln_posterior,trs,meta");
+    let now = Instant::now();
+    let mut top_n: TopN<Box<MetaProgramHypothesisWrapper>> = TopN::new(params.simulation.top_n);
+    // TODO: hacked in constants.
+    let mut mpctl = MetaProgramControl::new(&[], &params.model, 7, 50);
+    let timeout = params.simulation.timeout;
+    let data = convert_examples_to_data(examples);
+    let borrowed_data = data.iter().collect_vec();
+    // TODO: should go after trial start, but am here to avoid mutability issues.
+    update_data_mcmc(
+        &mut mpctl,
+        &mut top_n,
+        &borrowed_data,
+        params.simulation.top_n,
+    );
+    let t0 = TRS::new_unchecked(&lex, params.simulation.deterministic, background, vec![]);
+    let p0 = MetaProgram::from(t0);
+    let h0 = MetaProgramHypothesis::new(&mpctl, p0);
+    let mut ctl = Control::new(0, timeout * 1000, 0, 0, 0);
+    // TODO: fix me
+    //mcts.start_trial();
+    let mut chain = MCMCChain::new(h0, &borrowed_data);
+    {
+        //let mut chain_iter = chain.iter(ctl, rng);
+        println!("# drawing samples: {}ms", now.elapsed().as_millis());
+        while let Some(sample) = chain.internal_next(&mut ctl, rng) {
+            print_hypothesis_mcmc(problem, order, &sample);
+            top_n.add(ScoredItem {
+                // TODO: a hack to use meta-program prior for tie-breaking.
+                score: -sample.bayes_score().posterior - sample.ln_meta / 100.0,
+                data: Box::new(MetaProgramHypothesisWrapper(sample.clone())),
+            })
+        }
+    }
+    // TODO: fix me
+    // mcts.finish_trial();
+    println!("# END OF SEARCH");
+    println!("# top hypotheses:");
+    top_n.iter().sorted().enumerate().for_each(|(i, h)| {
+        println!(
+            "# {},{}",
+            i,
+            hypothesis_string_mcmc(problem, order, &h.data.0)
+        )
+    });
+    println!("#");
+    println!("# problem: {}", problem);
+    println!("# order: {}", order);
+    println!("# hypotheses: {}", chain.samples());
+    println!("# ratio: {}", chain.acceptance_ratio());
+    // TODO: fix search time
+    Ok(0.0)
+}
+
 fn convert_examples_to_data(examples: &[Rule]) -> Vec<TRSDatum> {
     examples
         .iter()
@@ -208,6 +300,10 @@ fn convert_examples_to_data(examples: &[Rule]) -> Vec<TRSDatum> {
 
 fn print_hypothesis(problem: &str, order: usize, h: &SimObj) {
     println!("{}", hypothesis_string(problem, order, h));
+}
+
+fn print_hypothesis_mcmc(problem: &str, order: usize, h: &MetaProgramHypothesis) {
+    println!("{}", hypothesis_string_mcmc(problem, order, h));
 }
 
 fn hypothesis_string(problem: &str, order: usize, h: &SimObj) -> String {
@@ -230,6 +326,25 @@ fn hypothesis_string(problem: &str, order: usize, h: &SimObj) -> String {
     )
 }
 
+fn hypothesis_string_mcmc(problem: &str, order: usize, h: &MetaProgramHypothesis) -> String {
+    hypothesis_string_inner(
+        problem,
+        order,
+        h.state.trs().unwrap(),
+        &h.state.metaprogram().unwrap().iter().cloned().collect_vec(),
+        h.birth.time,
+        h.birth.count,
+        &[
+            h.ln_meta,
+            h.ln_trs,
+            h.ln_wf,
+            h.ln_acc,
+            h.bayes_score().posterior,
+        ],
+        None,
+    )
+}
+
 fn hypothesis_string_inner(
     problem: &str,
     order: usize,
@@ -245,39 +360,23 @@ fn hypothesis_string_inner(
     let meta_string = format!("{}", moves.iter().format("."));
     match correct {
         None => format!(
-            "\"{}\",{},{:.9},{},{},\"{}\",\"{}\"",
+            "\"{}\",{},{},{},{},\"{}\",\"{}\"",
             problem, order, time, count, objective_string, trs_str, meta_string,
         ),
         Some(result) => format!(
-            "\"{}\",{},{:.9},{},{},{},\"{}\",\"{}\"",
+            "\"{}\",{},{},{},{},{},\"{}\",\"{}\"",
             problem, order, time, count, objective_string, result, trs_str, meta_string,
         ),
     }
 }
 
-fn update_data<'a, 'b, R: Rng>(
+fn prune_tree<'a, 'b, R: Rng>(
     manager: &mut MCTSManager<TRSMCTS<'a, 'b>>,
     top_n: &mut TopN<Box<SimObj<'a, 'b>>>,
-    data: &'b [&'b TRSDatum],
-    prune_n: usize,
     rng: &mut R,
 ) {
-    // 0. Update the data.
-    manager.tree_mut().mcts_mut().data = data;
-
-    // 1. Update the top_n.
-    for mut h in std::mem::replace(top_n, TopN::new(prune_n)).to_vec() {
-        h.data.update_posterior(manager.tree().mcts());
-        // TODO: a hack to use meta-program prior for tie-breaking.
-        h.score = -h.data.hyp.ln_posterior - h.data.hyp.ln_meta / 100.0;
-        top_n.add(h);
-    }
-
-    // 2. Reset the MCTS store.
-    manager.tree_mut().mcts_mut().clear();
+    // Prune the tree store.
     let root_state = manager.tree_mut().mcts_mut().root();
-
-    // 3. Prune the tree store.
     let paths = top_n
         .iter()
         .sorted()
@@ -290,23 +389,72 @@ fn update_data<'a, 'b, R: Rng>(
         .prune_except(paths.into_iter(), root_state, rng);
 }
 
-fn make_manager<'ctx, 'b, R: Rng>(
+fn update_data<'a, 'b>(
+    mcts: &mut TRSMCTS<'a, 'b>,
+    top_n: &mut TopN<Box<SimObj<'a, 'b>>>,
+    data: &'b [&'b TRSDatum],
+    prune_n: usize,
+) {
+    // 0. Update the data.
+    mcts.ctl.data = data;
+
+    // 1. Update the top_n.
+    for mut h in std::mem::replace(top_n, TopN::new(prune_n)).to_vec() {
+        h.data.update_posterior(&mcts.ctl);
+        // TODO: a hack to use meta-program prior for tie-breaking.
+        h.score = -h.data.hyp.ln_posterior - h.data.hyp.ln_meta / 100.0;
+        top_n.add(h);
+    }
+
+    // 2. Reset the MCTS store.
+    mcts.clear();
+}
+
+fn update_data_mcmc<'a, 'b>(
+    ctl: &mut MetaProgramControl<'b>,
+    top_n: &mut TopN<Box<MetaProgramHypothesisWrapper<'a, 'b>>>,
+    data: &'b [&'b TRSDatum],
+    prune_n: usize,
+) {
+    // 0. Update the data.
+    ctl.data = data;
+
+    // 1. Update the top_n.
+    for mut h in std::mem::replace(top_n, TopN::new(prune_n)).to_vec() {
+        h.data.0.compute_posterior(ctl.data, None);
+        // TODO: a hack to use meta-program prior for tie-breaking.
+        h.score = -h.data.0.bayes_score().posterior - h.data.0.ln_meta / 100.0;
+        top_n.add(h);
+    }
+}
+
+fn make_mcts<'ctx, 'b>(
     lex: Lexicon<'ctx, 'b>,
     background: &'b [Rule],
-    params: &Params,
+    params: &'b Params,
     data: &'b [&'b TRSDatum],
-    rng: &mut R,
-) -> MCTSManager<TRSMCTS<'ctx, 'b>> {
-    let mut mcts = TRSMCTS::new(
+) -> TRSMCTS<'ctx, 'b> {
+    // TODO: hacked in constants
+    let mpctl = MetaProgramControl::new(data, &params.model, 7, 50);
+    TRSMCTS::new(
         lex,
         background,
         params.simulation.deterministic,
         params.simulation.lo,
         params.simulation.hi,
-        data,
-        params.model,
+        mpctl,
         params.mcts,
-    );
+    )
+}
+
+fn make_manager<'ctx, 'b, R: Rng>(
+    lex: Lexicon<'ctx, 'b>,
+    background: &'b [Rule],
+    params: &'b Params,
+    data: &'b [&'b TRSDatum],
+    rng: &mut R,
+) -> MCTSManager<TRSMCTS<'ctx, 'b>> {
+    let mut mcts = make_mcts(lex, background, params, data);
     let state_eval = MCTSStateEvaluator;
     let move_eval = BestInSubtreeMoveEvaluator;
     let root = mcts.root();
