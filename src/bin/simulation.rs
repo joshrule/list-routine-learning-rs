@@ -294,7 +294,7 @@ fn convert_examples_to_data(examples: &[Rule]) -> Vec<TRSDatum> {
             if i < examples.len() - 1 {
                 TRSDatum::Full(e)
             } else {
-                TRSDatum::Partial(e.rhs().unwrap())
+                TRSDatum::Partial(e.lhs)
             }
         })
         .collect_vec()
