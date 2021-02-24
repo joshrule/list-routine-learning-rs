@@ -187,8 +187,7 @@ fn search<'ctx, 'b, R: Rng>(
         if let Some(obj) = SimObj::try_new(hyp, manager.tree().mcts()) {
             print_hypothesis(problem, order, &obj);
             top_n.add(ScoredItem {
-                // TODO: a hack to use meta-program prior for tie-breaking.
-                score: -obj.hyp.ln_posterior - obj.hyp.ln_meta / 100.0,
+                score: -obj.hyp.ln_posterior,
                 data: Box::new(obj),
             })
         } else {
@@ -257,8 +256,7 @@ fn search_mcmc<'ctx, 'b, R: Rng>(
         while let Some(sample) = chain.internal_next(&mut ctl, rng) {
             print_hypothesis_mcmc(problem, order, &sample);
             top_n.add(ScoredItem {
-                // TODO: a hack to use meta-program prior for tie-breaking.
-                score: -sample.bayes_score().posterior - sample.ln_meta / 100.0,
+                score: -sample.bayes_score().posterior,
                 data: Box::new(MetaProgramHypothesisWrapper(sample.clone())),
             })
         }
@@ -401,8 +399,7 @@ fn update_data<'a, 'b>(
     // 1. Update the top_n.
     for mut h in std::mem::replace(top_n, TopN::new(prune_n)).to_vec() {
         h.data.update_posterior(&mcts.ctl);
-        // TODO: a hack to use meta-program prior for tie-breaking.
-        h.score = -h.data.hyp.ln_posterior - h.data.hyp.ln_meta / 100.0;
+        h.score = -h.data.hyp.ln_posterior;
         top_n.add(h);
     }
 
@@ -422,8 +419,7 @@ fn update_data_mcmc<'a, 'b>(
     // 1. Update the top_n.
     for mut h in std::mem::replace(top_n, TopN::new(prune_n)).to_vec() {
         h.data.0.compute_posterior(ctl.data, None);
-        // TODO: a hack to use meta-program prior for tie-breaking.
-        h.score = -h.data.0.bayes_score().posterior - h.data.0.ln_meta / 100.0;
+        h.score = -h.data.0.bayes_score().posterior;
         top_n.add(h);
     }
 }
