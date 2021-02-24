@@ -243,7 +243,9 @@ fn search_mcmc<'ctx, 'b, R: Rng>(
         &borrowed_data,
         params.simulation.top_n,
     );
-    let t0 = TRS::new_unchecked(&lex, params.simulation.deterministic, background, vec![]);
+    let mut t0 = TRS::new_unchecked(&lex, params.simulation.deterministic, background, vec![]);
+    t0.set_bounds(params.simulation.lo, params.simulation.hi);
+    t0.identify_symbols();
     let p0 = MetaProgram::from(t0);
     let h0 = MetaProgramHypothesis::new(&mpctl, p0);
     let mut ctl = Control::new(0, timeout * 1000, 0, 0, 0);
