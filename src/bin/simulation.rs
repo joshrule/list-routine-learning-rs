@@ -24,8 +24,10 @@ use programinduction::{
 };
 use rand::{thread_rng, Rng};
 use regex::Regex;
-use std::{f64, fs::File, io::BufReader, path::PathBuf, process::exit, str, time::Instant};
-use term_rewriting::{Operator, Rule};
+use std::{
+    cmp::Ordering, f64, fs::File, io::BufReader, path::PathBuf, process::exit, str, time::Instant,
+};
+use term_rewriting::{trace::Trace, Operator, Rule, Term};
 
 fn main() {
     with_ctx(4096, |ctx| {
@@ -98,7 +100,8 @@ fn main() {
             search_mcmc(
                 lex.clone(),
                 &background,
-                &data[..params.simulation.n_predictions],
+                &data,
+                params.simulation.n_predictions,
                 &mut params.clone(),
                 (&problem, order),
                 rng,
@@ -224,6 +227,7 @@ fn search_mcmc<'ctx, 'b, R: Rng>(
     lex: Lexicon<'ctx, 'b>,
     background: &'b [Rule],
     examples: &'b [Rule],
+    train_set_size: usize,
     params: &mut Params,
     (problem, order): (&str, usize),
     rng: &mut R,
@@ -235,8 +239,8 @@ fn search_mcmc<'ctx, 'b, R: Rng>(
     let mut mpctl =
         MetaProgramControl::new(&[], &params.model, 7, 50, params.simulation.trs_temperature);
     let timeout = params.simulation.timeout;
-    let data = convert_examples_to_data(examples);
-    let borrowed_data = data.iter().collect_vec();
+    let train_data = convert_examples_to_data(&examples[..train_set_size]);
+    let borrowed_data = train_data.iter().collect_vec();
     // TODO: should go after trial start, but am here to avoid mutability issues.
     update_data_mcmc(
         &mut mpctl,
@@ -473,4 +477,34 @@ fn make_manager<'ctx, 'b, R: Rng>(
     let move_eval = BestInSubtreeMoveEvaluator;
     let root = mcts.root();
     MCTSManager::new(mcts, root, state_eval, move_eval, rng)
+}
+
+fn process_prediction<'ctx, 'b>(query: &Rule, best: &TRS<'ctx, 'b>, params: &Params) -> bool {
+    query.rhs[0] == make_prediction(best, &query.lhs, params)
+}
+
+fn make_prediction<'a, 'b>(trs: &TRS<'a, 'b>, input: &Term, params: &Params) -> Term {
+    let utrs = trs.full_utrs();
+    let lex = trs.lexicon();
+    let sig = lex.signature();
+    let trace = Trace::new(
+        &utrs,
+        sig,
+        input,
+        params.model.likelihood.p_observe,
+        params.model.likelihood.max_steps,
+        params.model.likelihood.max_size,
+        params.model.likelihood.strategy,
+    );
+    let best = trace
+        .iter()
+        .max_by(|n1, n2| {
+            trace[*n1]
+                .log_p()
+                .partial_cmp(&trace[*n2].log_p())
+                .or(Some(Ordering::Less))
+                .unwrap()
+        })
+        .unwrap();
+    trace[best].term().clone()
 }
