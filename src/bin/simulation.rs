@@ -214,9 +214,9 @@ fn search<'ctx, 'b, R: Rng>(
 pub struct MetaProgramHypothesisWrapper<'ctx, 'b>(MetaProgramHypothesis<'ctx, 'b>);
 
 impl<'ctx, 'b> Keyed for MetaProgramHypothesisWrapper<'ctx, 'b> {
-    type Key = State<'ctx, 'b>;
+    type Key = MetaProgram<'ctx, 'b>;
     fn key(&self) -> &Self::Key {
-        &self.0.state
+        &self.0.state.path
     }
 }
 
