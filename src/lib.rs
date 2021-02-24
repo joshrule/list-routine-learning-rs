@@ -180,7 +180,7 @@ impl<T: Eq + Keyed> TopN<T> {
         }
     }
     pub fn add(&mut self, datum: ScoredItem<T>) {
-        if self.data.len() < self.size {
+        if self.data.len() < self.size && !self.data.iter().any(|x| *x == datum) {
             self.data.push(datum);
         } else if let Some(worst) = self.most() {
             if datum.score < worst.score {
