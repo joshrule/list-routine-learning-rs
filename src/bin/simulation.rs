@@ -291,8 +291,18 @@ fn search_mcmc<'ctx, 'b, R: Rng>(
     println!("#");
     println!("# problem: {}", problem);
     println!("# order: {}", order);
-    println!("# hypotheses: {}", chain.samples());
-    println!("# ratio: {}", chain.acceptance_ratio());
+    println!("# samples: {}", chain.samples());
+    println!("# acceptance ratio: {}", chain.acceptance_ratio());
+    println!(
+        "# best hypothesis metaprogram: {}",
+        top_n.least().unwrap().data.0.state.path
+    );
+    println!(
+        "# best hypothesis TRS: {}",
+        best.to_string().lines().join(" ")
+    );
+    println!("# correct predictions rational: {}/{}", n_correct, n_tried);
+    println!("# correct predictions float: {}", n_correct / n_tried);
     // TODO: fix search time
     Ok(0.0)
 }
@@ -349,6 +359,7 @@ fn hypothesis_string_mcmc(problem: &str, order: usize, h: &MetaProgramHypothesis
         h.birth.time,
         h.birth.count,
         &[
+            // TODO: fixme
             h.ln_meta,
             h.ln_trs,
             h.ln_wf,
@@ -370,18 +381,8 @@ fn hypothesis_string_inner(
     correct: Option<bool>,
 ) -> String {
     let trs_str = trs.to_string().lines().join(" ");
-    let objective_string = format!("{:.4}", objective.iter().format(","));
+    let objective_string = format!("{: >10.4}", objective.iter().format("\t"));
     let meta_string = format!("{}", moves.iter().format("."));
-    match correct {
-        None => format!(
-            "\"{}\",{},{},{},{},\"{}\",\"{}\"",
-            problem, order, time, count, objective_string, trs_str, meta_string,
-        ),
-        Some(result) => format!(
-            "\"{}\",{},{},{},{},{},\"{}\",\"{}\"",
-            problem, order, time, count, objective_string, result, trs_str, meta_string,
-        ),
-    }
 }
 
 fn prune_tree<'a, 'b, R: Rng>(
