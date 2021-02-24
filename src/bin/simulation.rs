@@ -38,7 +38,7 @@ fn main() {
             _best_filename,
             _prediction_filename,
             _all_filename,
-            out_filename,
+            _out_filename,
         ) = exit_err(load_args(), "Failed to load parameters");
         notice("loaded parameters", 0);
 
@@ -262,14 +262,22 @@ fn search_mcmc<'ctx, 'b, R: Rng>(
             top_n.add(ScoredItem {
                 score: -sample.bayes_score().posterior,
                 data: Box::new(MetaProgramHypothesisWrapper(sample.clone())),
-            })
+            });
         }
     }
     // TODO: fix me
     // mcts.finish_trial();
+    let mut n_correct = 0;
+    let mut n_tried = 0;
+    let best = &top_n.least().unwrap().data.0.state.trs;
+    for query in &examples[train_set_size..] {
+        let correct = process_prediction(query, best, params);
+        n_correct += correct as usize;
+        n_tried += 1;
+    }
     println!("# END OF SEARCH");
     println!("# top hypotheses:");
-    top_n.iter().sorted().enumerate().for_each(|(i, h)| {
+    top_n.iter().sorted().enumerate().rev().for_each(|(i, h)| {
         println!(
             "# {},{}",
             i,
