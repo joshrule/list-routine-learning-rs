@@ -30,6 +30,8 @@ EQUAL/0: t0. t0 -> t0 -> bool;
 HEAD/0: list -> nat;
 IF/0: t0. bool -> t0 -> t0 -> t0;
 TAIL/0: list -> list;
+REVERSE/0: list -> list;
+REV/0: list -> list -> list;
 +/0: nat -> nat -> nat;
 -/0: nat -> nat -> nat;
 >/0: nat -> nat -> bool;

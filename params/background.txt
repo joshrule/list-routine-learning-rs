@@ -16,3 +16,9 @@ IF FALSE x_ y_ = y_;
 # TAIL
 TAIL NIL = NIL;
 TAIL (CONS x_ y_) = y_;
+
+# REVERSE
+REVERSE x_ = REV x_ NIL;
+
+REV NIL a_ = a_;
+REV (CONS x_ y_) a_ = REV y_ (CONS x_ a_);
