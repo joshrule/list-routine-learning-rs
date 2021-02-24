@@ -36,6 +36,12 @@ hi = 99
 # How many hypotheses do we preserve across trials?
 top_n = 100
 
+# What's the likelihood temperature?
+temperature = 10.0
+
+# What's the temperature of the TRS prior vs. the Metaprogram prior?
+trs_temperature = 1000.0
+
 [mcts]
 
 # The maximum number of search moves that can be chained together.

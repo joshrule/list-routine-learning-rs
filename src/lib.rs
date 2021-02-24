@@ -286,6 +286,8 @@ pub struct SimulationParams {
     pub signature: String,
     pub background: String,
     pub top_n: usize,
+    pub temperature: f64,
+    pub trs_temperature: f64,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

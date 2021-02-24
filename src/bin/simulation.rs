@@ -232,7 +232,8 @@ fn search_mcmc<'ctx, 'b, R: Rng>(
     let now = Instant::now();
     let mut top_n: TopN<Box<MetaProgramHypothesisWrapper>> = TopN::new(params.simulation.top_n);
     // TODO: hacked in constants.
-    let mut mpctl = MetaProgramControl::new(&[], &params.model, 7, 50);
+    let mut mpctl =
+        MetaProgramControl::new(&[], &params.model, 7, 50, params.simulation.trs_temperature);
     let timeout = params.simulation.timeout;
     let data = convert_examples_to_data(examples);
     let borrowed_data = data.iter().collect_vec();
@@ -252,6 +253,7 @@ fn search_mcmc<'ctx, 'b, R: Rng>(
     // TODO: fix me
     //mcts.start_trial();
     let mut chain = MCMCChain::new(h0, &borrowed_data);
+    chain.set_temperature(params.simulation.temperature);
     {
         //let mut chain_iter = chain.iter(ctl, rng);
         println!("# drawing samples: {}ms", now.elapsed().as_millis());
@@ -433,7 +435,13 @@ fn make_mcts<'ctx, 'b>(
     data: &'b [&'b TRSDatum],
 ) -> TRSMCTS<'ctx, 'b> {
     // TODO: hacked in constants
-    let mpctl = MetaProgramControl::new(data, &params.model, 7, 50);
+    let mpctl = MetaProgramControl::new(
+        data,
+        &params.model,
+        7,
+        50,
+        params.simulation.trs_temperature,
+    );
     TRSMCTS::new(
         lex,
         background,
