@@ -13,12 +13,15 @@ use itertools::Itertools;
 use list_routine_learning_rs::*;
 use polytype::atype::with_ctx;
 use programinduction::{
-    hypotheses::Bayesable,
-    inference::{Control, MCMCChain},
+    hypotheses::{Bayesable, Temperable},
+    inference::{Control, ParallelTempering, TemperatureLadder},
     mcts::MCTSManager,
     trs::{
         mcts::{BestInSubtreeMoveEvaluator, MCTSStateEvaluator, TRSMCTS},
-        metaprogram::{MetaProgram, MetaProgramControl, MetaProgramHypothesis, Move, State},
+        metaprogram::{
+            MetaProgram, MetaProgramControl, MetaProgramHypothesis, Move, State, StateLabel,
+            Temperature,
+        },
         Datum as TRSDatum, Lexicon, TRS,
     },
 };
@@ -256,15 +259,25 @@ fn search_mcmc<'ctx, 'b, R: Rng>(
     let mut ctl = Control::new(0, timeout * 1000, 0, 0, 0);
     // TODO: fix me
     //mcts.start_trial();
-    let mut chain = MCMCChain::new(h0, &borrowed_data);
-    chain.set_temperature(params.simulation.temperature);
+    let swap = 1000;
+    let ladder = TemperatureLadder(vec![
+        Temperature::new(1.0, 1.0),
+        Temperature::new(10.0, 1.0),
+        Temperature::new(50.0, 1.0),
+        Temperature::new(100.0, 2.0),
+        Temperature::new(100.0, 5.0),
+        Temperature::new(1000.0, 10.0),
+        Temperature::new(1000.0, 100.0),
+    ]);
+    let mut chain = ParallelTempering::new(h0, &borrowed_data, ladder, swap, rng);
     {
         //let mut chain_iter = chain.iter(ctl, rng);
         println!("# drawing samples: {}ms", now.elapsed().as_millis());
         while let Some(sample) = chain.internal_next(&mut ctl, rng) {
             print_hypothesis_mcmc(problem, order, &sample);
             top_n.add(ScoredItem {
-                score: -sample.bayes_score().posterior,
+                // TODO: magic constant.
+                score: -sample.at_temperature(Temperature::new(10.0, 1.0)),
                 data: Box::new(MetaProgramHypothesisWrapper(sample.clone())),
             });
         }
@@ -273,9 +286,9 @@ fn search_mcmc<'ctx, 'b, R: Rng>(
     // mcts.finish_trial();
     let mut n_correct = 0;
     let mut n_tried = 0;
-    let best = &top_n.least().unwrap().data.0.state.trs;
+    let best = &top_n.least().unwrap().data.0.state;
     for query in &examples[train_set_size..] {
-        let correct = process_prediction(query, best, params);
+        let correct = process_prediction(query, &best.trs, params);
         n_correct += correct as usize;
         n_tried += 1;
     }
@@ -291,15 +304,12 @@ fn search_mcmc<'ctx, 'b, R: Rng>(
     println!("#");
     println!("# problem: {}", problem);
     println!("# order: {}", order);
-    println!("# samples: {}", chain.samples());
-    println!("# acceptance ratio: {}", chain.acceptance_ratio());
-    println!(
-        "# best hypothesis metaprogram: {}",
-        top_n.least().unwrap().data.0.state.path
-    );
+    println!("# samples: {:?}", chain.samples());
+    println!("# acceptance ratio: {:?}", chain.acceptance_ratio());
+    println!("# best hypothesis metaprogram: {}", best.path);
     println!(
         "# best hypothesis TRS: {}",
-        best.to_string().lines().join(" ")
+        best.trs.to_string().lines().join(" ")
     );
     println!("# correct predictions rational: {}/{}", n_correct, n_tried);
     println!("# correct predictions float: {}", n_correct / n_tried);
@@ -383,6 +393,7 @@ fn hypothesis_string_inner(
     let trs_str = trs.to_string().lines().join(" ");
     let objective_string = format!("{: >10.4}", objective.iter().format("\t"));
     let meta_string = format!("{}", moves.iter().format("."));
+    format!("{}\t\"{}\"", objective_string, meta_string,)
 }
 
 fn prune_tree<'a, 'b, R: Rng>(
@@ -436,7 +447,7 @@ fn update_data_mcmc<'a, 'b>(
     // 1. Update the top_n.
     for mut h in std::mem::replace(top_n, TopN::new(prune_n)).to_vec() {
         h.data.0.compute_posterior(ctl.data, None);
-        h.score = -h.data.0.bayes_score().posterior;
+        h.score = -h.data.0.at_temperature(Temperature::new(10.0, 1.0));
         top_n.add(h);
     }
 }
