@@ -1,13 +1,13 @@
 # Concept
-C/0: list -> list;
+C/0: list(nat) -> list(nat);
 
 # Constructors
 # # Booleans
 TRUE/0: bool;
 FALSE/0: bool;
 # # Lists
-NIL/0: list;
-CONS/0: nat -> list -> list;
+NIL/0: t0. list(t0);
+CONS/0: t0. t0 -> list(t0) -> list(t0);
 # # Numbers
 0/0: digit;
 1/0: digit;
@@ -25,13 +25,17 @@ NAN/0: nat;
 
 # Functions
 ./2: t1. t2. (t1 -> t2) -> t1 -> t2;
-EMPTY/0: list -> bool;
+EMPTY/0: t0. list(t0) -> bool;
 EQUAL/0: t0. t0 -> t0 -> bool;
-HEAD/0: list -> nat;
+FOLD/0: t0. t1. (t0 -> t1 -> t1) -> t1 -> list(t0) -> t1;
+FILTER/0: t0. (t0 -> bool) -> list(t0) -> list(t0);
+HEAD/0: t0. list(t0) -> t0;
 IF/0: t0. bool -> t0 -> t0 -> t0;
-TAIL/0: list -> list;
-REVERSE/0: list -> list;
-REV/0: list -> list -> list;
+MAP/0: t0. t1. (t0 -> t1) -> list(t0) -> list(t1);
+REVERSE/0: t0. list(t0) -> list(t0);
+TAIL/0: t0. list(t0) -> list(t0);
+UNFOLD/0: t0. t1. (t1 -> bool) -> (t1 -> t0) -> (t1 -> t1) -> t1 -> list(t0);
 +/0: nat -> nat -> nat;
 -/0: nat -> nat -> nat;
 >/0: nat -> nat -> bool;
+

@@ -6,6 +6,14 @@ EMPTY (CONS x_ y_) = FALSE;
 EQUAL x_ x_ = TRUE;
 EQUAL x_ y_ = FALSE;
 
+# FILTER
+FILTER f_ NIL = NIL;
+FILTER f_ (CONS x_ y_) = IF (f_ x_) (CONS x_ (FILTER f_ y_)) (FILTER f_ y_);
+
+# FOLD
+FOLD f_ acc_ NIL = acc_;
+FOLD f_ acc_ (CONS x_ y_) = FOLD f_ (f_ x_ acc_) y_;
+
 # HEAD
 HEAD (CONS x_ y_) = x_;
 
@@ -13,12 +21,18 @@ HEAD (CONS x_ y_) = x_;
 IF TRUE  x_ y_ = x_;
 IF FALSE x_ y_ = y_;
 
+# MAP
+MAP f_ NIL = NIL;
+MAP f_ (CONS x_ y_) = (CONS (f_ x_) (MAP f_ y_));
+
+# REVERSE
+REVERSE = FOLD CONS NIL;
+
 # TAIL
 TAIL NIL = NIL;
 TAIL (CONS x_ y_) = y_;
 
-# REVERSE
-REVERSE x_ = REV x_ NIL;
+# UNFOLD
+UNFOLD p_ f_ n_ x_ = IF (p_ x_) (CONS (f_ x_) (UNFOLD p_ f_ n_ (n_ x_))) NIL;
 
-REV NIL a_ = a_;
-REV (CONS x_ y_) a_ = REV y_ (CONS x_ a_);
+# +, -, and > all piggyback on rust.

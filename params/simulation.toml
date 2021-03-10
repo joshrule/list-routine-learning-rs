@@ -12,8 +12,10 @@ n_predictions = 8
 # n_predictions = 5
 
 # Search for at most this many seconds for each datum.
+# timeout = 1200
 # timeout = 600
 # timeout = 300
+# timeout = 180
 # timeout = 120
 # timeout = 90
 timeout = 60
