@@ -205,7 +205,7 @@ fn search<'ctx, 'b, R: Rng>(
         .iter()
         .sorted()
         .enumerate()
-        .for_each(|(i, h)| println!("# {},{}", i, hypothesis_string(problem, order, &h.data)));
+        .for_each(|(i, h)| println!("# {}\t{}", i, hypothesis_string(problem, order, &h.data)));
     println!("#");
     println!("# problem: {}", problem);
     println!("# order: {}", order);
@@ -277,7 +277,7 @@ fn search_mcmc<'ctx, 'b, R: Rng>(
             print_hypothesis_mcmc(problem, order, &sample);
             top_n.add(ScoredItem {
                 // TODO: magic constant.
-                score: -sample.at_temperature(Temperature::new(10.0, 1.0)),
+                score: -sample.at_temperature(Temperature::new(2.0 / 3.0, 0.04)),
                 data: Box::new(MetaProgramHypothesisWrapper(sample.clone())),
             });
         }
@@ -296,7 +296,7 @@ fn search_mcmc<'ctx, 'b, R: Rng>(
     println!("# top hypotheses:");
     top_n.iter().sorted().enumerate().rev().for_each(|(i, h)| {
         println!(
-            "# {},{}",
+            "# {}\t{}",
             i,
             hypothesis_string_mcmc(problem, order, &h.data.0)
         )
@@ -374,26 +374,27 @@ fn hypothesis_string_mcmc(problem: &str, order: usize, h: &MetaProgramHypothesis
             h.ln_trs,
             h.ln_wf,
             h.ln_acc,
-            h.bayes_score().posterior,
+            h.at_temperature(Temperature::new(2.0 / 3.0, 0.04)),
         ],
         None,
     )
 }
 
 fn hypothesis_string_inner(
-    problem: &str,
-    order: usize,
+    _problem: &str,
+    _order: usize,
     trs: &TRS,
     moves: &[Move],
-    time: f64,
-    count: usize,
+    _time: f64,
+    _count: usize,
     objective: &[f64],
-    correct: Option<bool>,
+    _correct: Option<bool>,
 ) -> String {
-    let trs_str = trs.to_string().lines().join(" ");
+    //let trs_str = trs.to_string().lines().join(" ");
+    let trs_len = trs.size();
     let objective_string = format!("{: >10.4}", objective.iter().format("\t"));
     let meta_string = format!("{}", moves.iter().format("."));
-    format!("{}\t\"{}\"", objective_string, meta_string,)
+    format!("{}\t{}\t\"{}\"", trs_len, objective_string, meta_string,)
 }
 
 fn prune_tree<'a, 'b, R: Rng>(
@@ -447,7 +448,7 @@ fn update_data_mcmc<'a, 'b>(
     // 1. Update the top_n.
     for mut h in std::mem::replace(top_n, TopN::new(prune_n)).to_vec() {
         h.data.0.compute_posterior(ctl.data, None);
-        h.score = -h.data.0.at_temperature(Temperature::new(10.0, 1.0));
+        h.score = -h.data.0.at_temperature(Temperature::new(2.0 / 3.0, 0.04));
         top_n.add(h);
     }
 }
