@@ -191,7 +191,7 @@ fn search<'ctx, 'b, R: Rng>(
     println!("# END OF SEARCH");
     for (_, hyp) in manager.tree().mcts().hypotheses.iter() {
         if let Some(obj) = SimObj::try_new(hyp, manager.tree().mcts()) {
-            print_hypothesis(problem, order, &obj);
+            print_hypothesis(problem, order, &obj, false);
             top_n.add(ScoredItem {
                 score: -obj.hyp.ln_posterior,
                 data: Box::new(obj),
@@ -201,11 +201,13 @@ fn search<'ctx, 'b, R: Rng>(
         }
     }
     println!("# top hypotheses:");
-    top_n
-        .iter()
-        .sorted()
-        .enumerate()
-        .for_each(|(i, h)| println!("# {}\t{}", i, hypothesis_string(problem, order, &h.data)));
+    top_n.iter().sorted().enumerate().for_each(|(i, h)| {
+        println!(
+            "# {}\t{}",
+            i,
+            hypothesis_string(problem, order, &h.data, true)
+        )
+    });
     println!("#");
     println!("# problem: {}", problem);
     println!("# order: {}", order);
@@ -274,7 +276,7 @@ fn search_mcmc<'ctx, 'b, R: Rng>(
         //let mut chain_iter = chain.iter(ctl, rng);
         println!("# drawing samples: {}ms", now.elapsed().as_millis());
         while let Some(sample) = chain.internal_next(&mut ctl, rng) {
-            print_hypothesis_mcmc(problem, order, &sample);
+            print_hypothesis_mcmc(problem, order, &sample, false);
             top_n.add(ScoredItem {
                 // TODO: magic constant.
                 score: -sample.at_temperature(Temperature::new(2.0 / 3.0, 0.04)),
@@ -298,7 +300,7 @@ fn search_mcmc<'ctx, 'b, R: Rng>(
         println!(
             "# {}\t{}",
             i,
-            hypothesis_string_mcmc(problem, order, &h.data.0)
+            hypothesis_string_mcmc(problem, order, &h.data.0, true)
         )
     });
     println!("#");
@@ -332,15 +334,15 @@ fn convert_examples_to_data(examples: &[Rule]) -> Vec<TRSDatum> {
         .collect_vec()
 }
 
-fn print_hypothesis(problem: &str, order: usize, h: &SimObj) {
-    println!("{}", hypothesis_string(problem, order, h));
+fn print_hypothesis(problem: &str, order: usize, h: &SimObj, print_trs: bool) {
+    println!("{}", hypothesis_string(problem, order, h, print_trs));
 }
 
-fn print_hypothesis_mcmc(problem: &str, order: usize, h: &MetaProgramHypothesis) {
-    println!("{}", hypothesis_string_mcmc(problem, order, h));
+fn print_hypothesis_mcmc(problem: &str, order: usize, h: &MetaProgramHypothesis, print_trs: bool) {
+    println!("{}", hypothesis_string_mcmc(problem, order, h, print_trs));
 }
 
-fn hypothesis_string(problem: &str, order: usize, h: &SimObj) -> String {
+fn hypothesis_string(problem: &str, order: usize, h: &SimObj, print_trs: bool) -> String {
     hypothesis_string_inner(
         problem,
         order,
@@ -357,10 +359,16 @@ fn hypothesis_string(problem: &str, order: usize, h: &SimObj) -> String {
             h.hyp.ln_posterior,
         ],
         None,
+        print_trs,
     )
 }
 
-fn hypothesis_string_mcmc(problem: &str, order: usize, h: &MetaProgramHypothesis) -> String {
+fn hypothesis_string_mcmc(
+    problem: &str,
+    order: usize,
+    h: &MetaProgramHypothesis,
+    print_trs: bool,
+) -> String {
     hypothesis_string_inner(
         problem,
         order,
@@ -377,6 +385,7 @@ fn hypothesis_string_mcmc(problem: &str, order: usize, h: &MetaProgramHypothesis
             h.at_temperature(Temperature::new(2.0 / 3.0, 0.04)),
         ],
         None,
+        print_trs,
     )
 }
 
@@ -389,12 +398,21 @@ fn hypothesis_string_inner(
     _count: usize,
     objective: &[f64],
     _correct: Option<bool>,
+    print_trs: bool,
 ) -> String {
     //let trs_str = trs.to_string().lines().join(" ");
     let trs_len = trs.size();
     let objective_string = format!("{: >10.4}", objective.iter().format("\t"));
     let meta_string = format!("{}", moves.iter().format("."));
-    format!("{}\t{}\t\"{}\"", trs_len, objective_string, meta_string,)
+    if print_trs {
+        let trs_string = format!("{}", trs).lines().join(" ");
+        format!(
+            "{}\t{}\t\"{}\"\t\"{}\"",
+            trs_len, objective_string, meta_string, trs_string
+        )
+    } else {
+        format!("{}\t{}\t\"{}\"", trs_len, objective_string, meta_string)
+    }
 }
 
 fn prune_tree<'a, 'b, R: Rng>(
