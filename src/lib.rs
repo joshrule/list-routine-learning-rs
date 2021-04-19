@@ -9,7 +9,7 @@ use programinduction::trs::{
 use rand::Rng;
 use serde_derive::{Deserialize, Serialize};
 use std::{collections::BinaryHeap, fs::read_to_string, ops::Deref, path::PathBuf, process::exit};
-use term_rewriting::{Operator, Rule, RuleContext, Term};
+use term_rewriting::{NumberRepresentation, Operator, Rule, RuleContext, Term};
 
 pub fn start_section(s: &str) {
     println!("#\n# {}\n# {}", s, "-".repeat(s.len()));
@@ -314,9 +314,14 @@ impl Datum {
     /// Convert a `Datum` to a term rewriting [`Rule`].
     ///
     /// [`Rule`]: ../term_rewriting/struct.Rule.html
-    pub fn to_rule(&self, lex: &Lexicon, concept: Operator) -> Result<Rule, ()> {
-        let lhs = self.i.to_term(lex, Some(concept))?;
-        let rhs = self.o.to_term(lex, None)?;
+    pub fn to_rule(
+        &self,
+        lex: &Lexicon,
+        concept: Operator,
+        rep: NumberRepresentation,
+    ) -> Result<Rule, ()> {
+        let lhs = self.i.to_term(lex, Some(concept), rep)?;
+        let rhs = self.o.to_term(lex, None, rep)?;
         Rule::new(lhs, vec![rhs]).ok_or(())
     }
 }
@@ -347,10 +352,15 @@ pub enum Value {
     Bool(bool),
 }
 impl Value {
-    pub fn to_term(&self, lex: &Lexicon, lhs: Option<Operator>) -> Result<Term, ()> {
+    pub fn to_term(
+        &self,
+        lex: &Lexicon,
+        lhs: Option<Operator>,
+        rep: NumberRepresentation,
+    ) -> Result<Term, ()> {
         let base_term = match self {
-            Value::Int(x) => Value::num_to_term(lex, *x)?,
-            Value::IntList(xs) => Value::list_to_term(lex, &xs)?,
+            Value::Int(x) => Value::num_to_term(lex, *x, rep)?,
+            Value::IntList(xs) => Value::list_to_term(lex, &xs, rep)?,
             Value::Bool(true) => Term::Application {
                 op: lex.has_operator(Some("true"), 0).map_err(|_| ())?,
                 args: vec![],
@@ -361,84 +371,34 @@ impl Value {
             },
         };
         if let Some(op) = lhs {
-            let op_term = Term::Application { op, args: vec![] };
-            Ok(Term::Application {
-                op: lex.has_operator(Some("."), 2).map_err(|_| ())?,
-                args: vec![op_term, base_term],
-            })
+            let args = vec![base_term];
+            Ok(Term::Application { op, args })
         } else {
             Ok(base_term)
         }
     }
-    fn list_to_term(lex: &Lexicon, xs: &[usize]) -> Result<Term, ()> {
+    fn list_to_term(lex: &Lexicon, xs: &[usize], rep: NumberRepresentation) -> Result<Term, ()> {
         let ts: Vec<Term> = xs
             .iter()
-            .map(|&x| Value::num_to_term(lex, x))
+            .map(|&x| Value::num_to_term(lex, x, rep))
             .rev()
             .collect::<Result<Vec<_>, _>>()?;
         let nil = lex.has_operator(Some("NIL"), 0).map_err(|_| ())?;
-        let cons = lex.has_operator(Some("CONS"), 0).map_err(|_| ())?;
-        let app = lex.has_operator(Some("."), 2).map_err(|_| ())?;
+        let cons = lex.has_operator(Some("CONS"), 2).map_err(|_| ())?;
         let mut term = Term::Application {
             op: nil,
             args: vec![],
         };
         for t in ts {
-            let cons_term = Term::Application {
-                op: cons,
-                args: vec![],
-            };
-            let inner_term = Term::Application {
-                op: app,
-                args: vec![cons_term, t],
-            };
             term = Term::Application {
-                op: app,
-                args: vec![inner_term, term],
+                op: cons,
+                args: vec![t, term],
             };
         }
         Ok(term)
     }
-    fn make_digit(lex: &Lexicon, n: usize) -> Result<Term, ()> {
-        let digit_const = Term::Application {
-            op: lex.has_operator(Some("DIGIT"), 0).map_err(|_| ())?,
-            args: vec![],
-        };
-        let num_const = Term::Application {
-            op: lex.has_operator(Some(&n.to_string()), 0).map_err(|_| ())?,
-            args: vec![],
-        };
-        Ok(Term::Application {
-            op: lex.has_operator(Some("."), 2).map_err(|_| ())?,
-            args: vec![digit_const, num_const],
-        })
-    }
-    fn num_to_term(lex: &Lexicon, num: usize) -> Result<Term, ()> {
-        match num {
-            0..=9 => Value::make_digit(lex, num),
-            _ => {
-                let app = lex.has_operator(Some("."), 2).map_err(|_| ())?;
-                let decc_term = Term::Application {
-                    op: lex.has_operator(Some("DECC"), 0).map_err(|_| ())?,
-                    args: vec![],
-                };
-                let num_term = Value::num_to_term(lex, num / 10)?;
-                let inner_term = Term::Application {
-                    op: app,
-                    args: vec![decc_term, num_term],
-                };
-                let digit_term = Term::Application {
-                    op: lex
-                        .has_operator(Some(&(num % 10).to_string()), 0)
-                        .map_err(|_| ())?,
-                    args: vec![],
-                };
-                Ok(Term::Application {
-                    op: app,
-                    args: vec![inner_term, digit_term],
-                })
-            }
-        }
+    fn num_to_term(lex: &Lexicon, num: usize, rep: NumberRepresentation) -> Result<Term, ()> {
+        Term::from_usize(num, lex.signature(), rep).ok_or(())
     }
 }
 

@@ -69,7 +69,7 @@ fn main() {
         let (examples, problem) = exit_err(load_problem(&problem_filename), "Problem loading data");
         let data: Vec<_> = examples
             .iter()
-            .map(|e| e.to_rule(&lex, c))
+            .map(|e| e.to_rule(&lex, c, params.model.likelihood.representation))
             .collect::<Result<Vec<_>, _>>()
             .unwrap_or_else(|_| {
                 eprintln!("Data conversion failed.");
@@ -150,7 +150,7 @@ fn load_problem(data_filename: &str) -> Result<(Vec<Datum>, String), String> {
 
 fn identify_concept(lex: &Lexicon) -> Result<Operator, String> {
     str_err(
-        lex.has_operator(Some("C"), 0)
+        lex.has_operator(Some("C"), 1)
             .or_else(|_| Err(String::from("No target concept"))),
     )
 }
@@ -229,7 +229,7 @@ impl<'ctx, 'b> Keyed for MetaProgramHypothesisWrapper<'ctx, 'b> {
 }
 
 fn search_mcmc<'ctx, 'b, R: Rng>(
-    lex: Lexicon<'ctx, 'b>,
+    mut lex: Lexicon<'ctx, 'b>,
     background: &'b [Rule],
     examples: &'b [Rule],
     train_set_size: usize,
@@ -241,8 +241,7 @@ fn search_mcmc<'ctx, 'b, R: Rng>(
     let now = Instant::now();
     let mut top_n: TopN<Box<MetaProgramHypothesisWrapper>> = TopN::new(params.simulation.top_n);
     // TODO: hacked in constants.
-    let mut mpctl =
-        MetaProgramControl::new(&[], &params.model, 7, 50, params.simulation.trs_temperature);
+    let mut mpctl = MetaProgramControl::new(&[], &params.model, params.mcts.atom_weights, 7, 50);
     let timeout = params.simulation.timeout;
     let train_data = convert_examples_to_data(&examples[..train_set_size]);
     let borrowed_data = train_data.iter().collect_vec();
@@ -264,19 +263,21 @@ fn search_mcmc<'ctx, 'b, R: Rng>(
     let swap = 1000;
     let ladder = TemperatureLadder(vec![
         Temperature::new(1.0, 1.0),
-        Temperature::new(10.0, 1.0),
-        Temperature::new(50.0, 1.0),
-        Temperature::new(100.0, 2.0),
-        Temperature::new(100.0, 5.0),
-        Temperature::new(1000.0, 10.0),
-        Temperature::new(1000.0, 100.0),
+        Temperature::new(2.0, 1.0),
+        Temperature::new(4.0, 1.0),
+        Temperature::new(8.0, 1.0),
+        // Temperature::new(50.0, 1.0),
+        // Temperature::new(100.0, 2.0),
+        // Temperature::new(100.0, 5.0),
+        // Temperature::new(1000.0, 10.0),
+        // Temperature::new(1000.0, 100.0),
     ]);
     let mut chain = ParallelTempering::new(h0, &borrowed_data, ladder, swap, rng);
     {
         //let mut chain_iter = chain.iter(ctl, rng);
         println!("# drawing samples: {}ms", now.elapsed().as_millis());
         while let Some(sample) = chain.internal_next(&mut ctl, rng) {
-            print_hypothesis_mcmc(problem, order, &sample, false);
+            print_hypothesis_mcmc(problem, order, &sample, true);
             top_n.add(ScoredItem {
                 // TODO: magic constant.
                 score: -sample.at_temperature(Temperature::new(2.0 / 3.0, 0.04)),
@@ -308,6 +309,7 @@ fn search_mcmc<'ctx, 'b, R: Rng>(
     println!("# order: {}", order);
     println!("# samples: {:?}", chain.samples());
     println!("# acceptance ratio: {:?}", chain.acceptance_ratio());
+    println!("# swap ratio: {:?}", chain.swaps());
     println!("# best hypothesis metaprogram: {}", best.path);
     println!(
         "# best hypothesis TRS: {}",
@@ -404,15 +406,26 @@ fn hypothesis_string_inner(
     let trs_len = trs.size();
     let objective_string = format!("{: >10.4}", objective.iter().format("\t"));
     let meta_string = format!("{}", moves.iter().format("."));
+    let trs_string = format!("{}", trs).lines().join(" ");
     if print_trs {
-        let trs_string = format!("{}", trs).lines().join(" ");
+        format!("{}\t{}\t\"{}\"\t", trs_len, objective_string, trs_string)
+    } else {
         format!(
             "{}\t{}\t\"{}\"\t\"{}\"",
-            trs_len, objective_string, meta_string, trs_string
+            trs_len, objective_string, trs_string, meta_string
         )
-    } else {
-        format!("{}\t{}\t\"{}\"", trs_len, objective_string, meta_string)
     }
+    // TODO: fixme
+    //match correct {
+    //    None => format!(
+    //        "\"{}\",{},{},{},{},\"{}\",\"{}\"",
+    //        problem, order, time, count, objective_string, trs_str, meta_string,
+    //    ),
+    //    Some(result) => format!(
+    //        "\"{}\",{},{},{},{},{},\"{}\",\"{}\"",
+    //        problem, order, time, count, objective_string, result, trs_str, meta_string,
+    //    ),
+    //}
 }
 
 fn prune_tree<'a, 'b, R: Rng>(
@@ -478,13 +491,7 @@ fn make_mcts<'ctx, 'b>(
     data: &'b [&'b TRSDatum],
 ) -> TRSMCTS<'ctx, 'b> {
     // TODO: hacked in constants
-    let mpctl = MetaProgramControl::new(
-        data,
-        &params.model,
-        7,
-        50,
-        params.simulation.trs_temperature,
-    );
+    let mpctl = MetaProgramControl::new(data, &params.model, params.mcts.atom_weights, 7, 50);
     TRSMCTS::new(
         lex,
         background,
@@ -526,6 +533,7 @@ fn make_prediction<'a, 'b>(trs: &TRS<'a, 'b>, input: &Term, params: &Params) -> 
         params.model.likelihood.max_steps,
         params.model.likelihood.max_size,
         params.model.likelihood.strategy,
+        params.model.likelihood.representation,
     );
     let best = trace
         .iter()
