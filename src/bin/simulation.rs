@@ -260,14 +260,16 @@ fn search_mcmc<'ctx, 'b, R: Rng>(
     let mut ctl = Control::new(0, timeout * 1000, 0, 0, 0);
     // TODO: fix me
     //mcts.start_trial();
-    let swap = 1000;
+    let swap = 5000;
     let ladder = TemperatureLadder(vec![
-        Temperature::new(1.0, 1.0),
-        Temperature::new(2.0, 1.0),
-        Temperature::new(4.0, 1.0),
-        Temperature::new(8.0, 1.0),
-        // Temperature::new(50.0, 1.0),
-        // Temperature::new(100.0, 2.0),
+        Temperature::new(1.0, 0.25),
+        Temperature::new(1.5, 0.25),
+        Temperature::new(2.0, 0.25),
+        Temperature::new(2.25, 0.25),
+        Temperature::new(2.5, 0.25),
+        Temperature::new(3.0, 0.25),
+        Temperature::new(3.5, 0.25),
+        Temperature::new(4.0, 0.25),
         // Temperature::new(100.0, 5.0),
         // Temperature::new(1000.0, 10.0),
         // Temperature::new(1000.0, 100.0),
