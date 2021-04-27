@@ -116,6 +116,12 @@ fn main() {
     })
 }
 
+fn temp(i: usize, n: usize, max_t: usize) -> f64 {
+    let temp = (i as f64 * (max_t as f64).ln() / ((n - 1) as f64)).exp();
+    println!("temp: {} {} {} -> {}", i, n, max_t, temp);
+    temp
+}
+
 fn report_time(search_time: f64, total_time: f64) {
     notice(format!("search time: {:.3}s", search_time), 0);
     notice(format!("total time: {:.3}s", total_time), 0);
@@ -262,17 +268,11 @@ fn search_mcmc<'ctx, 'b, R: Rng>(
     //mcts.start_trial();
     let swap = 5000;
     let ladder = TemperatureLadder(vec![
-        Temperature::new(1.0, 0.25),
-        Temperature::new(1.5, 0.25),
-        Temperature::new(2.0, 0.25),
-        Temperature::new(2.25, 0.25),
-        Temperature::new(2.5, 0.25),
-        Temperature::new(3.0, 0.25),
-        Temperature::new(3.5, 0.25),
-        Temperature::new(4.0, 0.25),
-        // Temperature::new(100.0, 5.0),
-        // Temperature::new(1000.0, 10.0),
-        // Temperature::new(1000.0, 100.0),
+        Temperature::new(temp(0, 5, 9), temp(0, 5, 9) * 0.25),
+        Temperature::new(temp(1, 5, 9), temp(1, 5, 9) * 0.25),
+        Temperature::new(temp(2, 5, 9), temp(2, 5, 9) * 0.25),
+        Temperature::new(temp(3, 5, 9), temp(3, 5, 9) * 0.25),
+        Temperature::new(temp(4, 5, 9), temp(4, 5, 9) * 0.25),
     ]);
     let mut chain = ParallelTempering::new(h0, &borrowed_data, ladder, swap, rng);
     {
