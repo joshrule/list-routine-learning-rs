@@ -7,9 +7,10 @@ signature = "params/signature.txt"
 background = "params/background.txt"
 
 # Make this many predictions.
-# n_predictions = 11
-n_predictions = 8
+n_predictions = 11
+# n_predictions = 8
 # n_predictions = 5
+# n_predictions = 2
 
 # Search for at most this many seconds for each datum.
 # timeout = 1200
@@ -34,7 +35,8 @@ deterministic = true
 
 # Bound numbers:
 lo = 0
-hi = 99
+# hi = 99
+hi = 9
 
 # How many hypotheses do we preserve across trials?
 top_n = 100
@@ -86,7 +88,7 @@ prior = { "SimpleGenerative" = { p_rule = 0.5, atom_weights = [0.8, 1.0] } }
 #
 # alpha: This is the probability that we sampled an output rather than getting it by rewriting.
 [model.likelihood]
-decay = 0.9
+decay = 0.0
 strategy = "Normal"
 representation = { logic = "Symbolic", app = "NonApplicative" }
 p_observe = 0.0

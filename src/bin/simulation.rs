@@ -267,13 +267,7 @@ fn search_mcmc<'ctx, 'b, R: Rng>(
     // TODO: fix me
     //mcts.start_trial();
     let swap = 5000;
-    let ladder = TemperatureLadder(vec![
-        Temperature::new(temp(0, 5, 9), temp(0, 5, 9) * 0.25),
-        Temperature::new(temp(1, 5, 9), temp(1, 5, 9) * 0.25),
-        Temperature::new(temp(2, 5, 9), temp(2, 5, 9) * 0.25),
-        Temperature::new(temp(3, 5, 9), temp(3, 5, 9) * 0.25),
-        Temperature::new(temp(4, 5, 9), temp(4, 5, 9) * 0.25),
-    ]);
+    let ladder = TemperatureLadder(vec![Temperature::new(1.0, 1.0)]);
     let mut chain = ParallelTempering::new(h0, &borrowed_data, ladder, swap, rng);
     {
         //let mut chain_iter = chain.iter(ctl, rng);
@@ -318,7 +312,7 @@ fn search_mcmc<'ctx, 'b, R: Rng>(
         best.trs.to_string().lines().join(" ")
     );
     println!("# correct predictions rational: {}/{}", n_correct, n_tried);
-    println!("# correct predictions float: {}", n_correct / n_tried);
+    //println!("# correct predictions float: {}", n_correct / n_tried);
     // TODO: fix search time
     Ok(0.0)
 }
@@ -329,11 +323,12 @@ fn convert_examples_to_data(examples: &[Rule]) -> Vec<TRSDatum> {
         .cloned()
         .enumerate()
         .map(|(i, e)| {
-            if i < examples.len() - 1 {
-                TRSDatum::Full(e)
-            } else {
-                TRSDatum::Partial(e.lhs)
-            }
+            TRSDatum::Full(e)
+            // if i < examples.len() - 1 {
+            //     TRSDatum::Full(e)
+            // } else {
+            //     TRSDatum::Partial(e.lhs)
+            // }
         })
         .collect_vec()
 }
