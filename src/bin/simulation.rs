@@ -28,7 +28,14 @@ use programinduction::{
 use rand::{thread_rng, Rng};
 use regex::Regex;
 use std::{
-    cmp::Ordering, f64, fs::File, io::BufReader, path::PathBuf, process::exit, str, time::Instant,
+    cmp::Ordering,
+    f64,
+    fs::File,
+    io::{BufReader, Write},
+    path::PathBuf,
+    process::exit,
+    str,
+    time::Instant,
 };
 use term_rewriting::{trace::Trace, Operator, Rule, Term};
 
@@ -40,7 +47,7 @@ fn main() {
             params,
             _runs,
             problem_filename,
-            _best_filename,
+            best_filename,
             _prediction_filename,
             _all_filename,
             _out_filename,
@@ -107,6 +114,7 @@ fn main() {
                 params.simulation.n_predictions,
                 &mut params.clone(),
                 (&problem, order),
+                &best_filename,
                 rng,
             ),
             "search failed",
@@ -241,10 +249,12 @@ fn search_mcmc<'ctx, 'b, R: Rng>(
     train_set_size: usize,
     params: &mut Params,
     (problem, order): (&str, usize),
+    best_filename: &str,
     rng: &mut R,
 ) -> Result<f64, String> {
     println!("# problem,order,time,count,ln_meta,ln_trs,ln_wf,ln_acc,ln_posterior,trs,meta");
     let now = Instant::now();
+    let mut best_file = std::fs::File::create(best_filename).expect("file");
     let mut top_n: TopN<Box<MetaProgramHypothesisWrapper>> = TopN::new(params.simulation.top_n);
     // TODO: hacked in constants.
     let mut mpctl = MetaProgramControl::new(&[], &params.model, params.mcts.atom_weights, 7, 50);
@@ -269,14 +279,25 @@ fn search_mcmc<'ctx, 'b, R: Rng>(
     let swap = 5000;
     let ladder = TemperatureLadder(vec![Temperature::new(1.0, 1.0)]);
     let mut chain = ParallelTempering::new(h0, &borrowed_data, ladder, swap, rng);
+    let mut best = std::f64::INFINITY;
     {
-        //let mut chain_iter = chain.iter(ctl, rng);
         println!("# drawing samples: {}ms", now.elapsed().as_millis());
         while let Some(sample) = chain.internal_next(&mut ctl, rng) {
             print_hypothesis_mcmc(problem, order, &sample, true);
+            let score = -sample.at_temperature(Temperature::new(2.0, 1.0));
+            if score < best {
+                // write to best file;
+                writeln!(
+                    &mut best_file,
+                    "{}",
+                    hypothesis_string_mcmc(problem, order, &sample, true)
+                )
+                .expect("written");
+                best = score;
+            }
             top_n.add(ScoredItem {
                 // TODO: magic constant.
-                score: -sample.at_temperature(Temperature::new(2.0 / 3.0, 0.04)),
+                score,
                 data: Box::new(MetaProgramHypothesisWrapper(sample.clone())),
             });
         }
@@ -347,7 +368,7 @@ fn hypothesis_string(problem: &str, order: usize, h: &SimObj, print_trs: bool) -
         order,
         &h.trs,
         &h.hyp.moves,
-        h.hyp.time,
+        h.hyp.time as usize,
         h.hyp.count,
         &[
             h.hyp.ln_meta,
@@ -377,11 +398,11 @@ fn hypothesis_string_mcmc(
         h.birth.count,
         &[
             // TODO: fixme
-            h.ln_meta,
+            // h.ln_meta,
             h.ln_trs,
-            h.ln_wf,
+            // h.ln_wf,
             h.ln_acc,
-            h.at_temperature(Temperature::new(2.0 / 3.0, 0.04)),
+            h.at_temperature(Temperature::new(2.0, 1.0)),
         ],
         None,
         print_trs,
@@ -393,8 +414,8 @@ fn hypothesis_string_inner(
     _order: usize,
     trs: &TRS,
     moves: &[Move],
-    _time: f64,
-    _count: usize,
+    time: usize,
+    count: usize,
     objective: &[f64],
     _correct: Option<bool>,
     print_trs: bool,
@@ -405,11 +426,14 @@ fn hypothesis_string_inner(
     let meta_string = format!("{}", moves.iter().format("."));
     let trs_string = format!("{}", trs).lines().join(" ");
     if print_trs {
-        format!("{}\t{}\t\"{}\"\t", trs_len, objective_string, trs_string)
+        format!(
+            "{}\t{}\t{}\t{}\t\"{}\"\t",
+            trs_len, objective_string, count, time, trs_string
+        )
     } else {
         format!(
-            "{}\t{}\t\"{}\"\t\"{}\"",
-            trs_len, objective_string, trs_string, meta_string
+            "{}\t{}\t{}\t{}\t\"{}\"\t\"{}\"",
+            trs_len, objective_string, count, time, trs_string, meta_string
         )
     }
     // TODO: fixme
@@ -476,7 +500,7 @@ fn update_data_mcmc<'a, 'b>(
     // 1. Update the top_n.
     for mut h in std::mem::replace(top_n, TopN::new(prune_n)).to_vec() {
         h.data.0.compute_posterior(ctl.data, None);
-        h.score = -h.data.0.at_temperature(Temperature::new(2.0 / 3.0, 0.04));
+        h.score = -h.data.0.at_temperature(Temperature::new(2.0, 1.0));
         top_n.add(h);
     }
 }
