@@ -13,6 +13,7 @@ EQUALL(x_ x_) = TRUE;
 EQUALL(x_ y_) = FALSE;
 
 # HEAD
+HEAD(NIL) = NAN;
 HEAD(CONS(x_ y_)) = x_;
 
 # IF

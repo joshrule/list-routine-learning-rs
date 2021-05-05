@@ -522,6 +522,7 @@ fn make_prediction<'a, 'b>(trs: &TRS<'a, 'b>, input: &Term, params: &Params) -> 
     let utrs = trs.full_utrs();
     let lex = trs.lexicon();
     let sig = lex.signature();
+    let patterns = utrs.patterns(sig);
     let trace = Trace::new(
         &utrs,
         sig,
@@ -529,6 +530,7 @@ fn make_prediction<'a, 'b>(trs: &TRS<'a, 'b>, input: &Term, params: &Params) -> 
         params.model.likelihood.p_observe,
         params.model.likelihood.max_steps,
         params.model.likelihood.max_size,
+        &patterns,
         params.model.likelihood.strategy,
         params.model.likelihood.representation,
     );
