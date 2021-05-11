@@ -15,20 +15,14 @@ use polytype::atype::with_ctx;
 use programinduction::{
     hypotheses::{Bayesable, Temperable},
     inference::{Control, ParallelTempering, TemperatureLadder},
-    mcts::MCTSManager,
     trs::{
-        mcts::{BestInSubtreeMoveEvaluator, MCTSStateEvaluator, TRSMCTS},
-        metaprogram::{
-            MetaProgram, MetaProgramControl, MetaProgramHypothesis, Move, State, StateLabel,
-            Temperature,
-        },
+        metaprogram::{MetaProgram, MetaProgramControl, MetaProgramHypothesis, Move, Temperature},
         Datum as TRSDatum, Lexicon, TRS,
     },
 };
 use rand::{thread_rng, Rng};
 use regex::Regex;
 use std::{
-    cmp::Ordering,
     f64,
     fs::File,
     io::{BufReader, Write},
@@ -37,7 +31,17 @@ use std::{
     str,
     time::Instant,
 };
-use term_rewriting::{trace::Trace, Operator, Rule, Term};
+use term_rewriting::{Operator, Rule};
+
+#[derive(Clone, PartialEq, Eq)]
+pub struct MetaProgramHypothesisWrapper<'ctx, 'b>(MetaProgramHypothesis<'ctx, 'b>);
+
+impl<'ctx, 'b> Keyed for MetaProgramHypothesisWrapper<'ctx, 'b> {
+    type Key = MetaProgram<'ctx, 'b>;
+    fn key(&self) -> &Self::Key {
+        &self.0.state.path
+    }
+}
 
 fn main() {
     with_ctx(4096, |ctx| {
@@ -94,20 +98,8 @@ fn main() {
 
         notice("searching", 0);
         println!("problem,run,order,trial,steps,tree,hypotheses,search_time,total_time");
-        //let search_time = exit_err(
-        //    search(
-        //        lex.clone(),
-        //        &background,
-        //        &data[..params.simulation.n_predictions],
-        //        &mut params.clone(),
-        //        (&problem, order),
-        //        &out_filename,
-        //        rng,
-        //    ),
-        //    "search failed",
-        //);
         let search_time = exit_err(
-            search_mcmc(
+            search_online(
                 lex.clone(),
                 &background,
                 &data,
@@ -175,75 +167,8 @@ pub fn logsumexp(lps: &[f64]) -> f64 {
     largest + x
 }
 
-fn search<'ctx, 'b, R: Rng>(
+fn search_online<'ctx, 'b, R: Rng>(
     lex: Lexicon<'ctx, 'b>,
-    background: &'b [Rule],
-    examples: &'b [Rule],
-    params: &mut Params,
-    (problem, order): (&str, usize),
-    out_filename: &str,
-    rng: &mut R,
-) -> Result<f64, String> {
-    let mut top_n = TopN::new(params.simulation.top_n);
-    let mut manager = make_manager(lex, background, params, &[], rng);
-    let timeout = params.simulation.timeout;
-    let data = convert_examples_to_data(examples);
-    let borrowed_data = data.iter().collect_vec();
-    let now = Instant::now();
-    let n_prune = params.simulation.top_n;
-    manager.tree_mut().mcts_mut().start_trial();
-    update_data(
-        manager.tree_mut().mcts_mut(),
-        &mut top_n,
-        &borrowed_data,
-        n_prune,
-    );
-    prune_tree(&mut manager, &mut top_n, rng);
-    let n_steps = manager.step_until(rng, |_| now.elapsed().as_secs_f64() > (timeout as f64));
-    manager.tree_mut().mcts_mut().finish_trial();
-    let n_hyps = manager.tree().mcts().hypotheses.len();
-    println!("# END OF SEARCH");
-    for (_, hyp) in manager.tree().mcts().hypotheses.iter() {
-        if let Some(obj) = SimObj::try_new(hyp, manager.tree().mcts()) {
-            print_hypothesis(problem, order, &obj, false);
-            top_n.add(ScoredItem {
-                score: -obj.hyp.ln_posterior,
-                data: Box::new(obj),
-            })
-        } else {
-            println!("# FAILED: {}", hyp.count);
-        }
-    }
-    println!("# top hypotheses:");
-    top_n.iter().sorted().enumerate().for_each(|(i, h)| {
-        println!(
-            "# {}\t{}",
-            i,
-            hypothesis_string(problem, order, &h.data, true)
-        )
-    });
-    println!("#");
-    println!("# problem: {}", problem);
-    println!("# order: {}", order);
-    println!("# steps: {}", n_steps);
-    println!("# nodes: {}", manager.tree().tree().tree_size());
-    println!("# hypotheses: {}", n_hyps);
-    manager.tree().to_file(out_filename).expect("wrote tree");
-    Ok(manager.tree().mcts().search_time)
-}
-
-#[derive(Clone, PartialEq, Eq)]
-pub struct MetaProgramHypothesisWrapper<'ctx, 'b>(MetaProgramHypothesis<'ctx, 'b>);
-
-impl<'ctx, 'b> Keyed for MetaProgramHypothesisWrapper<'ctx, 'b> {
-    type Key = MetaProgram<'ctx, 'b>;
-    fn key(&self) -> &Self::Key {
-        &self.0.state.path
-    }
-}
-
-fn search_mcmc<'ctx, 'b, R: Rng>(
-    mut lex: Lexicon<'ctx, 'b>,
     background: &'b [Rule],
     examples: &'b [Rule],
     train_set_size: usize,
@@ -252,27 +177,122 @@ fn search_mcmc<'ctx, 'b, R: Rng>(
     best_filename: &str,
     rng: &mut R,
 ) -> Result<f64, String> {
-    println!("# problem,order,time,count,ln_meta,ln_trs,ln_wf,ln_acc,ln_posterior,trs,meta");
-    let now = Instant::now();
     let mut best_file = std::fs::File::create(best_filename).expect("file");
     let mut top_n: TopN<Box<MetaProgramHypothesisWrapper>> = TopN::new(params.simulation.top_n);
-    // TODO: hacked in constants.
-    let mut mpctl = MetaProgramControl::new(&[], &params.model, params.mcts.atom_weights, 7, 50);
     let timeout = params.simulation.timeout;
-    let train_data = convert_examples_to_data(&examples[..train_set_size]);
-    let borrowed_data = train_data.iter().collect_vec();
-    // TODO: should go after trial start, but am here to avoid mutability issues.
-    update_data_mcmc(
-        &mut mpctl,
-        &mut top_n,
-        &borrowed_data,
-        params.simulation.top_n,
-    );
+    // TODO: hacked in constants.
+    let mpctl = MetaProgramControl::new(&[], &params.model, params.mcts.atom_weights, 7, 50);
     let mut t0 = TRS::new_unchecked(&lex, params.simulation.deterministic, background, vec![]);
     t0.set_bounds(params.simulation.lo, params.simulation.hi);
     t0.identify_symbols();
     let p0 = MetaProgram::from(t0);
-    let h0 = MetaProgramHypothesis::new(&mpctl, p0);
+    let h0 = MetaProgramHypothesis::new(mpctl, p0);
+    let mut ctl = Control::new(0, 0, 0, 0, 0);
+    let swap = 5000;
+    //let ladder = TemperatureLadder(vec![
+    //    Temperature::new(temp(0, 5, 12), temp(0, 5, 12)),
+    //    Temperature::new(temp(1, 5, 12), temp(1, 5, 12)),
+    //    Temperature::new(temp(2, 5, 12), temp(2, 5, 12)),
+    //    Temperature::new(temp(3, 5, 12), temp(3, 5, 12)),
+    //    Temperature::new(temp(4, 5, 12), temp(4, 5, 12)),
+    //]);
+    let ladder = TemperatureLadder(vec![Temperature::new(1.0, 1.0)]);
+    let mut chain = ParallelTempering::new(h0, &[], ladder, swap, rng);
+    let mut best;
+    let train_data = (0..=train_set_size)
+        .map(|n| convert_examples_to_data(&examples[..n]))
+        .collect_vec();
+    let borrowed_data = train_data
+        .iter()
+        .map(|x| x.iter().collect_vec())
+        .collect_vec();
+    for n_data in 0..=train_set_size {
+        update_data_mcmc(
+            &mut chain,
+            &mut top_n,
+            &borrowed_data[n_data],
+            params.simulation.top_n,
+        );
+        ctl.runtime += timeout * 1000;
+        best = std::f64::INFINITY;
+        {
+            while let Some(sample) = chain.internal_next(&mut ctl, rng) {
+                print_hypothesis_mcmc(problem, order, n_data, &sample, true);
+                let score = -sample.at_temperature(Temperature::new(2.0, 1.0));
+                if score < best {
+                    writeln!(
+                        &mut best_file,
+                        "{}",
+                        hypothesis_string_mcmc(problem, order, n_data, &sample, true)
+                    )
+                    .expect("written");
+                    best = score;
+                }
+                top_n.add(ScoredItem {
+                    score,
+                    data: Box::new(MetaProgramHypothesisWrapper(sample.clone())),
+                });
+            }
+        }
+        if n_data == train_set_size {
+            let mut n_correct = 0;
+            let mut n_tried = 0;
+            let best = &top_n.least().unwrap().data.0.state;
+            for query in &examples[train_set_size..] {
+                let correct = process_prediction(query, &best.trs, params);
+                n_correct += correct as usize;
+                n_tried += 1;
+            }
+            println!("# END OF SEARCH");
+            println!("# top hypotheses:");
+            top_n.iter().sorted().enumerate().rev().for_each(|(i, h)| {
+                println!(
+                    "# {}\t{}",
+                    i,
+                    hypothesis_string_mcmc(problem, order, train_set_size, &h.data.0, true)
+                )
+            });
+            println!("#");
+            println!("# problem: {}", problem);
+            println!("# order: {}", order);
+            println!("# samples: {:?}", chain.samples());
+            println!("# acceptance ratio: {:?}", chain.acceptance_ratio());
+            println!("# swap ratio: {:?}", chain.swaps());
+            println!("# best hypothesis metaprogram: {}", best.path);
+            println!(
+                "# best hypothesis TRS: {}",
+                best.trs.to_string().lines().join(" ")
+            );
+            println!("# correct predictions rational: {}/{}", n_correct, n_tried);
+            // TODO: fix search time
+        }
+    }
+    Ok(0.0)
+}
+
+fn search_batch<'ctx, 'b, R: Rng>(
+    lex: Lexicon<'ctx, 'b>,
+    background: &'b [Rule],
+    examples: &'b [Rule],
+    train_set_size: usize,
+    params: &mut Params,
+    (problem, order): (&str, usize),
+    best_filename: &str,
+    rng: &mut R,
+) -> Result<f64, String> {
+    let now = Instant::now();
+    let mut best_file = std::fs::File::create(best_filename).expect("file");
+    let mut top_n: TopN<Box<MetaProgramHypothesisWrapper>> = TopN::new(params.simulation.top_n);
+    // TODO: hacked in constants.
+    let mpctl = MetaProgramControl::new(&[], &params.model, params.mcts.atom_weights, 7, 50);
+    let timeout = params.simulation.timeout;
+    let train_data = convert_examples_to_data(&examples[..train_set_size]);
+    let borrowed_data = train_data.iter().collect_vec();
+    let mut t0 = TRS::new_unchecked(&lex, params.simulation.deterministic, background, vec![]);
+    t0.set_bounds(params.simulation.lo, params.simulation.hi);
+    t0.identify_symbols();
+    let p0 = MetaProgram::from(t0);
+    let h0 = MetaProgramHypothesis::new(mpctl, p0);
     let mut ctl = Control::new(0, timeout * 1000, 0, 0, 0);
     // TODO: fix me
     //mcts.start_trial();
@@ -285,18 +305,25 @@ fn search_mcmc<'ctx, 'b, R: Rng>(
         Temperature::new(temp(4, 5, 12), temp(4, 5, 12)),
     ]);
     let mut chain = ParallelTempering::new(h0, &borrowed_data, ladder, swap, rng);
+    // TODO: should go after trial start, but am here to avoid mutability issues.
+    update_data_mcmc(
+        &mut chain,
+        &mut top_n,
+        &borrowed_data,
+        params.simulation.top_n,
+    );
     let mut best = std::f64::INFINITY;
     {
         println!("# drawing samples: {}ms", now.elapsed().as_millis());
         while let Some(sample) = chain.internal_next(&mut ctl, rng) {
-            print_hypothesis_mcmc(problem, order, &sample, true);
+            print_hypothesis_mcmc(problem, order, train_set_size, &sample, true);
             let score = -sample.at_temperature(Temperature::new(2.0, 1.0));
             if score < best {
                 // write to best file;
                 writeln!(
                     &mut best_file,
                     "{}",
-                    hypothesis_string_mcmc(problem, order, &sample, true)
+                    hypothesis_string_mcmc(problem, order, train_set_size, &sample, true)
                 )
                 .expect("written");
                 best = score;
@@ -324,7 +351,7 @@ fn search_mcmc<'ctx, 'b, R: Rng>(
         println!(
             "# {}\t{}",
             i,
-            hypothesis_string_mcmc(problem, order, &h.data.0, true)
+            hypothesis_string_mcmc(problem, order, train_set_size, &h.data.0, true)
         )
     });
     println!("#");
@@ -350,54 +377,39 @@ fn convert_examples_to_data(examples: &[Rule]) -> Vec<TRSDatum> {
         .cloned()
         .enumerate()
         .map(|(i, e)| {
-            TRSDatum::Full(e)
-            // if i < examples.len() - 1 {
-            //     TRSDatum::Full(e)
-            // } else {
-            //     TRSDatum::Partial(e.lhs)
-            // }
+            if i < examples.len() - 1 {
+                TRSDatum::Full(e)
+            } else {
+                TRSDatum::Partial(e.lhs)
+            }
         })
         .collect_vec()
 }
 
-fn print_hypothesis(problem: &str, order: usize, h: &SimObj, print_trs: bool) {
-    println!("{}", hypothesis_string(problem, order, h, print_trs));
-}
-
-fn print_hypothesis_mcmc(problem: &str, order: usize, h: &MetaProgramHypothesis, print_trs: bool) {
-    println!("{}", hypothesis_string_mcmc(problem, order, h, print_trs));
-}
-
-fn hypothesis_string(problem: &str, order: usize, h: &SimObj, print_trs: bool) -> String {
-    hypothesis_string_inner(
-        problem,
-        order,
-        &h.trs,
-        &h.hyp.moves,
-        h.hyp.time as usize,
-        h.hyp.count,
-        &[
-            h.hyp.ln_meta,
-            h.hyp.ln_trs,
-            h.hyp.ln_wf,
-            h.hyp.ln_acc,
-            h.hyp.ln_posterior,
-            h.hyp.ln_posterior,
-        ],
-        None,
-        print_trs,
-    )
+fn print_hypothesis_mcmc(
+    problem: &str,
+    order: usize,
+    trial: usize,
+    h: &MetaProgramHypothesis,
+    print_trs: bool,
+) {
+    println!(
+        "{}",
+        hypothesis_string_mcmc(problem, order, trial, h, print_trs)
+    );
 }
 
 fn hypothesis_string_mcmc(
     problem: &str,
     order: usize,
+    trial: usize,
     h: &MetaProgramHypothesis,
     print_trs: bool,
 ) -> String {
     hypothesis_string_inner(
         problem,
         order,
+        trial,
         h.state.trs().unwrap(),
         &h.state.metaprogram().unwrap().iter().cloned().collect_vec(),
         h.birth.time,
@@ -416,8 +428,9 @@ fn hypothesis_string_mcmc(
 }
 
 fn hypothesis_string_inner(
-    _problem: &str,
-    _order: usize,
+    problem: &str,
+    order: usize,
+    trial: usize,
     trs: &TRS,
     moves: &[Move],
     time: usize,
@@ -433,146 +446,52 @@ fn hypothesis_string_inner(
     let trs_string = format!("{}", trs).lines().join(" ");
     if print_trs {
         format!(
-            "{}\t{}\t{}\t{}\t\"{}\"\t",
-            trs_len, objective_string, count, time, trs_string
+            "{}\t{}\t{}\t{}\t{}\t{}\t{}\t\"{}\"\t",
+            problem, order, trial, trs_len, objective_string, count, time, trs_string
         )
     } else {
         format!(
-            "{}\t{}\t{}\t{}\t\"{}\"\t\"{}\"",
-            trs_len, objective_string, count, time, trs_string, meta_string
+            "{}\t{}\t{}\t{}\t{}\t{}\t{}\t\"{}\"\t\"{}\"",
+            problem, order, trial, trs_len, objective_string, count, time, trs_string, meta_string
         )
     }
-    // TODO: fixme
-    //match correct {
-    //    None => format!(
-    //        "\"{}\",{},{},{},{},\"{}\",\"{}\"",
-    //        problem, order, time, count, objective_string, trs_str, meta_string,
-    //    ),
-    //    Some(result) => format!(
-    //        "\"{}\",{},{},{},{},{},\"{}\",\"{}\"",
-    //        problem, order, time, count, objective_string, result, trs_str, meta_string,
-    //    ),
-    //}
-}
-
-fn prune_tree<'a, 'b, R: Rng>(
-    manager: &mut MCTSManager<TRSMCTS<'a, 'b>>,
-    top_n: &mut TopN<Box<SimObj<'a, 'b>>>,
-    rng: &mut R,
-) {
-    // Prune the tree store.
-    let root_state = manager.tree_mut().mcts_mut().root();
-    let paths = top_n
-        .iter()
-        .sorted()
-        .rev()
-        .filter(|h| h.data.hyp.test_path(manager.tree().mcts()))
-        .map(|h| h.data.hyp.moves.clone())
-        .collect_vec();
-    manager
-        .tree_mut()
-        .prune_except(paths.into_iter(), root_state, rng);
-}
-
-fn update_data<'a, 'b>(
-    mcts: &mut TRSMCTS<'a, 'b>,
-    top_n: &mut TopN<Box<SimObj<'a, 'b>>>,
-    data: &'b [&'b TRSDatum],
-    prune_n: usize,
-) {
-    // 0. Update the data.
-    mcts.ctl.data = data;
-
-    // 1. Update the top_n.
-    for mut h in std::mem::replace(top_n, TopN::new(prune_n)).to_vec() {
-        h.data.update_posterior(&mcts.ctl);
-        h.score = -h.data.hyp.ln_posterior;
-        top_n.add(h);
-    }
-
-    // 2. Reset the MCTS store.
-    mcts.clear();
 }
 
 fn update_data_mcmc<'a, 'b>(
-    ctl: &mut MetaProgramControl<'b>,
+    chain: &mut ParallelTempering<MetaProgramHypothesis<'a, 'b>>,
     top_n: &mut TopN<Box<MetaProgramHypothesisWrapper<'a, 'b>>>,
     data: &'b [&'b TRSDatum],
     prune_n: usize,
 ) {
-    // 0. Update the data.
-    ctl.data = data;
-
-    // 1. Update the top_n.
+    // 0. Update the top_n.
     for mut h in std::mem::replace(top_n, TopN::new(prune_n)).to_vec() {
-        h.data.0.compute_posterior(ctl.data, None);
+        h.data.0.ctl.data = data;
+        h.data.0.compute_posterior(data, None);
         h.score = -h.data.0.at_temperature(Temperature::new(2.0, 1.0));
         top_n.add(h);
     }
-}
 
-fn make_mcts<'ctx, 'b>(
-    lex: Lexicon<'ctx, 'b>,
-    background: &'b [Rule],
-    params: &'b Params,
-    data: &'b [&'b TRSDatum],
-) -> TRSMCTS<'ctx, 'b> {
-    // TODO: hacked in constants
-    let mpctl = MetaProgramControl::new(data, &params.model, params.mcts.atom_weights, 7, 50);
-    TRSMCTS::new(
-        lex,
-        background,
-        params.simulation.deterministic,
-        params.simulation.lo,
-        params.simulation.hi,
-        mpctl,
-        params.mcts,
-    )
-}
-
-fn make_manager<'ctx, 'b, R: Rng>(
-    lex: Lexicon<'ctx, 'b>,
-    background: &'b [Rule],
-    params: &'b Params,
-    data: &'b [&'b TRSDatum],
-    rng: &mut R,
-) -> MCTSManager<TRSMCTS<'ctx, 'b>> {
-    let mut mcts = make_mcts(lex, background, params, data);
-    let state_eval = MCTSStateEvaluator;
-    let move_eval = BestInSubtreeMoveEvaluator;
-    let root = mcts.root();
-    MCTSManager::new(mcts, root, state_eval, move_eval, rng)
-}
-
-fn process_prediction<'ctx, 'b>(query: &Rule, best: &TRS<'ctx, 'b>, params: &Params) -> bool {
-    query.rhs[0] == make_prediction(best, &query.lhs, params)
-}
-
-fn make_prediction<'a, 'b>(trs: &TRS<'a, 'b>, input: &Term, params: &Params) -> Term {
-    let utrs = trs.full_utrs();
-    let lex = trs.lexicon();
-    let sig = lex.signature();
-    let patterns = utrs.patterns(sig);
-    let trace = Trace::new(
-        &utrs,
-        sig,
-        input,
-        params.model.likelihood.p_observe,
-        params.model.likelihood.max_steps,
-        params.model.likelihood.max_size,
-        &patterns,
-        params.model.likelihood.strategy,
-        params.model.likelihood.representation,
-    );
-    let best = trace
-        .iter()
-        .max_by(|n1, n2| {
-            trace[*n1]
-                .log_p()
-                .partial_cmp(&trace[*n2].log_p())
-                .or(Some(Ordering::Less))
-                .unwrap()
-        })
-        .unwrap();
-    trace[best].term().clone()
+    // 1. Update the chain.
+    match top_n.least() {
+        Some(best) => {
+            println!(
+                "BEST: {}",
+                format!("{}", best.data.0.state.trs).lines().join(" ")
+            );
+            chain.set_data(data, true);
+            for (_, thread) in chain.pool.iter_mut() {
+                thread.current_mut().clone_from(&best.data.0);
+                println!(
+                    "UPDATE: {}",
+                    format!("{}", thread.current().state.trs).lines().join(" ")
+                );
+            }
+        }
+        None => {
+            chain.set_data(data, true);
+            for (_, thread) in chain.pool.iter_mut() {
+                thread.current_mut().ctl.data = data;
+            }
+        }
+    }
 }

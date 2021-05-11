@@ -2,14 +2,19 @@ use itertools::Itertools;
 use polytype::atype::TypeContext;
 use programinduction::trs::{
     mcts::{MCTSObj, MCTSParams, TRSMCTS},
-    metaprogram::{MetaProgramControl, Move},
-    parse_lexicon, parse_rulecontexts, parse_rules, parse_trs, Lexicon, ModelParams,
-    SingleLikelihood, TRS,
+    metaprogram::{
+        MetaProgram, MetaProgramControl, MetaProgramHypothesis, Move, State, StateLabel,
+    },
+    parse_lexicon, parse_rulecontexts, parse_rules, parse_trs, Datum as TRSDatum, Lexicon,
+    ModelParams, SingleLikelihood, TRS,
 };
 use rand::Rng;
 use serde_derive::{Deserialize, Serialize};
-use std::{collections::BinaryHeap, fs::read_to_string, ops::Deref, path::PathBuf, process::exit};
-use term_rewriting::{NumberRepresentation, Operator, Rule, RuleContext, Term};
+use std::{
+    cmp::Ordering, collections::BinaryHeap, fs::read_to_string, ops::Deref, path::PathBuf,
+    process::exit,
+};
+use term_rewriting::{trace::Trace, NumberRepresentation, Operator, Rule, RuleContext, Term};
 
 pub fn start_section(s: &str) {
     println!("#\n# {}\n# {}", s, "-".repeat(s.len()));
@@ -43,6 +48,115 @@ pub fn str_err<T, U: ToString>(x: Result<T, U>) -> Result<T, String> {
 pub fn path_to_string(dir: &str, file: &str) -> Result<String, String> {
     let path: PathBuf = [dir, file].iter().collect();
     str_err(read_to_string(path))
+}
+
+pub fn try_trs<'ctx, 'b>(
+    trs: &str,
+    lex: &mut Lexicon<'ctx, 'b>,
+    background: &'b [Rule],
+    params: &Params,
+    borrowed_data: &[&TRSDatum],
+    examples: &[Rule],
+) {
+    let mut trs = parse_trs(trs, lex, true, background).unwrap();
+    trs.set_bounds(params.simulation.lo, params.simulation.hi);
+    let lp = trs.log_prior(params.model.prior);
+    let ll = trs.log_likelihood(borrowed_data, params.model.likelihood);
+    println!(
+        "{:.4},{:.4},{:.4},\"{}\"",
+        lp,
+        ll,
+        lp / 2.0 + ll,
+        format!("{}", trs).lines().join(" ")
+    );
+    for datum in examples {
+        let term = make_prediction(&trs, &datum.lhs, params);
+        println!(
+            "{} => {}",
+            datum.pretty(lex.signature()),
+            term.pretty(lex.signature())
+        );
+    }
+}
+
+pub fn try_program<'ctx, 'b>(
+    t: TRS<'ctx, 'b>,
+    moves: Vec<Move<'ctx>>,
+    ctl: MetaProgramControl<'b>,
+) -> Vec<MetaProgramHypothesis<'ctx, 'b>> {
+    let mp = MetaProgram::new(t, vec![]);
+    let h = State::from_meta(mp, ctl);
+    let mut stack = vec![h];
+    for mv in moves {
+        println!("# {}", mv);
+        let mut processed = vec![];
+        while let Some(mut h) = stack.pop() {
+            if h.label != StateLabel::Failed {
+                if h.spec.is_none() {
+                    let these_moves = h.available_moves(ctl);
+                    h.make_move(&mv, these_moves.len(), ctl.data);
+                    if h.spec.is_none() {
+                        processed.push(h);
+                    } else {
+                        stack.push(h);
+                    }
+                } else {
+                    let these_moves = h.available_moves(ctl);
+                    let n = these_moves.len();
+                    for mv in h.available_moves(ctl) {
+                        let mut new_h = h.clone();
+                        new_h.make_move(&mv, n, ctl.data);
+                        if new_h.spec.is_none() {
+                            processed.push(new_h);
+                        } else {
+                            stack.push(new_h);
+                        }
+                    }
+                }
+            }
+        }
+        stack = processed;
+    }
+    println!("# processing {} hypotheses", stack.len());
+    stack
+        .into_iter()
+        .enumerate()
+        .inspect(|(i, h)| println!("# {}, {}", i, h.path))
+        .filter_map(|(_, s)| Some(MetaProgramHypothesis::new(ctl, s.metaprogram()?)))
+        .collect_vec()
+}
+
+pub fn process_prediction<'ctx, 'b>(query: &Rule, best: &TRS<'ctx, 'b>, params: &Params) -> bool {
+    query.rhs[0] == make_prediction(best, &query.lhs, params)
+}
+
+fn make_prediction<'a, 'b>(trs: &TRS<'a, 'b>, input: &Term, params: &Params) -> Term {
+    let utrs = trs.full_utrs();
+    let lex = trs.lexicon();
+    let sig = lex.signature();
+    let patterns = utrs.patterns(sig);
+    let trace = Trace::new(
+        &utrs,
+        sig,
+        input,
+        params.model.likelihood.p_observe,
+        params.model.likelihood.max_steps,
+        params.model.likelihood.max_size,
+        &patterns,
+        params.model.likelihood.strategy,
+        params.model.likelihood.representation,
+    );
+    let best = trace
+        .iter()
+        .max_by(|n1, n2| {
+            trace[*n1]
+                .log_p()
+                .partial_cmp(&trace[*n2].log_p())
+                .or(Some(Ordering::Less))
+                .unwrap()
+        })
+        .unwrap();
+    trace[best].term().clone()
 }
 
 pub fn load_lexicon<'ctx, 'b>(
