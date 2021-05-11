@@ -189,14 +189,13 @@ fn search_online<'ctx, 'b, R: Rng>(
     let h0 = MetaProgramHypothesis::new(mpctl, p0);
     let mut ctl = Control::new(0, 0, 0, 0, 0);
     let swap = 5000;
-    //let ladder = TemperatureLadder(vec![
-    //    Temperature::new(temp(0, 5, 12), temp(0, 5, 12)),
-    //    Temperature::new(temp(1, 5, 12), temp(1, 5, 12)),
-    //    Temperature::new(temp(2, 5, 12), temp(2, 5, 12)),
-    //    Temperature::new(temp(3, 5, 12), temp(3, 5, 12)),
-    //    Temperature::new(temp(4, 5, 12), temp(4, 5, 12)),
-    //]);
-    let ladder = TemperatureLadder(vec![Temperature::new(1.0, 1.0)]);
+    let ladder = TemperatureLadder(vec![
+        Temperature::new(temp(0, 5, 12), temp(0, 5, 12)),
+        Temperature::new(temp(1, 5, 12), temp(1, 5, 12)),
+        Temperature::new(temp(2, 5, 12), temp(2, 5, 12)),
+        Temperature::new(temp(3, 5, 12), temp(3, 5, 12)),
+        Temperature::new(temp(4, 5, 12), temp(4, 5, 12)),
+    ]);
     let mut chain = ParallelTempering::new(h0, &[], ladder, swap, rng);
     let mut best;
     let train_data = (0..=train_set_size)
