@@ -277,7 +277,13 @@ fn search_mcmc<'ctx, 'b, R: Rng>(
     // TODO: fix me
     //mcts.start_trial();
     let swap = 5000;
-    let ladder = TemperatureLadder(vec![Temperature::new(1.0, 1.0)]);
+    let ladder = TemperatureLadder(vec![
+        Temperature::new(temp(0, 5, 12), temp(0, 5, 12)),
+        Temperature::new(temp(1, 5, 12), temp(1, 5, 12)),
+        Temperature::new(temp(2, 5, 12), temp(2, 5, 12)),
+        Temperature::new(temp(3, 5, 12), temp(3, 5, 12)),
+        Temperature::new(temp(4, 5, 12), temp(4, 5, 12)),
+    ]);
     let mut chain = ParallelTempering::new(h0, &borrowed_data, ladder, swap, rng);
     let mut best = std::f64::INFINITY;
     {
