@@ -99,7 +99,7 @@ fn main() {
         notice("searching", 0);
         println!("problem,run,order,trial,steps,tree,hypotheses,search_time,total_time");
         let search_time = exit_err(
-            search_online(
+            search_batch(
                 lex.clone(),
                 &background,
                 &data,
@@ -189,13 +189,7 @@ fn search_online<'ctx, 'b, R: Rng>(
     let h0 = MetaProgramHypothesis::new(mpctl, p0);
     let mut ctl = Control::new(0, 0, 0, 0, 0);
     let swap = 5000;
-    let ladder = TemperatureLadder(vec![
-        Temperature::new(temp(0, 5, 12), temp(0, 5, 12)),
-        Temperature::new(temp(1, 5, 12), temp(1, 5, 12)),
-        Temperature::new(temp(2, 5, 12), temp(2, 5, 12)),
-        Temperature::new(temp(3, 5, 12), temp(3, 5, 12)),
-        Temperature::new(temp(4, 5, 12), temp(4, 5, 12)),
-    ]);
+    let ladder = TemperatureLadder(vec![Temperature::new(1.0, 1.0)]);
     let mut chain = ParallelTempering::new(h0, &[], ladder, swap, rng);
     let mut best;
     let train_data = (0..=train_set_size)
