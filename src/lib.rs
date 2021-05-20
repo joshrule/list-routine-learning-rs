@@ -72,7 +72,7 @@ pub fn try_trs<'ctx, 'b>(
     for datum in examples {
         let term = make_prediction(&trs, &datum.lhs, params);
         println!(
-            "{} => {}",
+            "{} => {}\n",
             datum.pretty(lex.signature()),
             term.pretty(lex.signature())
         );
@@ -85,7 +85,7 @@ pub fn try_program<'ctx, 'b>(
     ctl: MetaProgramControl<'b>,
 ) -> Vec<MetaProgramHypothesis<'ctx, 'b>> {
     let mp = MetaProgram::new(t, vec![]);
-    let h = State::from_meta(mp, ctl);
+    let h = State::from_meta(&mp, ctl);
     let mut stack = vec![h];
     for mv in moves {
         println!("# {}", mv);
