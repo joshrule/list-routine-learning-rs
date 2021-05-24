@@ -94,18 +94,23 @@ pub fn try_program<'ctx, 'b>(
             if h.label != StateLabel::Failed {
                 if h.spec.is_none() {
                     let these_moves = h.available_moves(ctl);
-                    h.make_move(&mv, these_moves.len(), ctl.data);
-                    if h.spec.is_none() {
-                        processed.push(h);
+                    if let Some(w) = these_moves.iter().find(|(imv, _)| *imv == mv).map(|x| x.1) {
+                        let z: f64 = these_moves.iter().map(|x| x.1).sum();
+                        h.make_move(&mv, w / z, ctl.data);
+                        if h.spec.is_none() {
+                            processed.push(h);
+                        } else {
+                            stack.push(h);
+                        }
                     } else {
-                        stack.push(h);
+                        h.label = StateLabel::Failed;
                     }
                 } else {
                     let these_moves = h.available_moves(ctl);
-                    let n = these_moves.len();
-                    for mv in h.available_moves(ctl) {
+                    let z: f64 = these_moves.iter().map(|x| x.1).sum();
+                    for (mv, w) in h.available_moves(ctl) {
                         let mut new_h = h.clone();
-                        new_h.make_move(&mv, n, ctl.data);
+                        new_h.make_move(&mv, w / z, ctl.data);
                         if new_h.spec.is_none() {
                             processed.push(new_h);
                         } else {

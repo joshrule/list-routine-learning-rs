@@ -99,7 +99,6 @@ fn main() {
         );
 
         notice("searching", 0);
-        println!("problem,run,order,trial,steps,tree,hypotheses,search_time,total_time");
         let search_time = exit_err(
             search_batch(
                 lex.clone(),
@@ -314,7 +313,6 @@ fn search_batch<'ctx, 'b, R: Rng>(
     let mut ctl1 = Control::new(0, timeout * 1000, 0, 0, 0);
     let mut ctl2 = Control::new(0, timeout * 1000, 0, 0, 0);
     let swap = 5000;
-    // TODO: should go after trial start, but am here to avoid mutability issues.
     let ladder = TemperatureLadder(vec![Temperature::new(2.0, 1.0)]);
     let mut chain1 = ParallelTempering::new(h01, &borrowed_data, ladder.clone(), swap, rng);
     let mut chain2 = ParallelTempering::new(h02, &borrowed_data, ladder, swap, rng);
