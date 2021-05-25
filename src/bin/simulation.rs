@@ -54,7 +54,7 @@ fn main() {
             _runs,
             problem_filename,
             best_filename,
-            _prediction_filename,
+            prediction_filename,
             _all_filename,
             _out_filename,
         ) = exit_err(load_args(), "Failed to load parameters");
@@ -100,7 +100,7 @@ fn main() {
 
         notice("searching", 0);
         let search_time = exit_err(
-            search_batch(
+            search_online(
                 lex.clone(),
                 &background,
                 &data,
@@ -108,6 +108,7 @@ fn main() {
                 &mut params.clone(),
                 (&problem, order),
                 &best_filename,
+                &prediction_filename,
                 rng,
             ),
             "search failed",
@@ -168,20 +169,36 @@ pub fn logsumexp(lps: &[f64]) -> f64 {
 }
 
 fn search_online<'ctx, 'b, R: Rng>(
-    mut lex: Lexicon<'ctx, 'b>,
+    lex: Lexicon<'ctx, 'b>,
     background: &'b [Rule],
     examples: &'b [Rule],
-    train_set_size: usize,
+    n_trials: usize,
     params: &mut Params,
     (problem, order): (&str, usize),
     best_filename: &str,
+    prediction_filename: &str,
     rng: &mut R,
 ) -> Result<f64, String> {
-    let mut best_file = std::fs::File::create(best_filename).expect("file");
+    let mut best_file = init_csv_fd(
+        best_filename,
+        "problem\trun\ttrial\tsize\tlmeta\tltrs\tlgen\tlacc\tlposterior\ttime\tcount\ttrs\tmetaprogram",
+    )?;
+    let mut prediction_file = init_csv_fd(
+        prediction_filename,
+        "problem\trun\ttrial\tsize\tlmeta\tltrs\tlgen\tlacc\tlposterior\ttime\tcount\taccuracy\ttrs\tmetaprogram",
+    )?;
     let mut top_n: TopN<Box<MetaProgramHypothesisWrapper>> = TopN::new(params.simulation.top_n);
     let timeout = params.simulation.timeout;
     // TODO: hacked in constants.
-    let mpctl = MetaProgramControl::new(
+    let mpctl1 = MetaProgramControl::new(
+        &[],
+        &params.model,
+        LearningMode::Refactor,
+        params.mcts.atom_weights,
+        7,
+        50,
+    );
+    let mpctl2 = MetaProgramControl::new(
         &[],
         &params.model,
         LearningMode::Sample,
@@ -193,80 +210,126 @@ fn search_online<'ctx, 'b, R: Rng>(
     t0.set_bounds(params.simulation.lo, params.simulation.hi);
     t0.identify_symbols();
     let p0 = MetaProgram::from(t0);
-    let h0 = MetaProgramHypothesis::new(mpctl, &p0);
-    let mut ctl = Control::new(0, 0, 0, 0, 0);
+    let h01 = MetaProgramHypothesis::new(mpctl1, &p0);
+    let h02 = MetaProgramHypothesis::new(mpctl2, &p0);
+    let mut ctl1 = Control::new(0, timeout * 1000, 0, 0, 0);
+    let mut ctl2 = Control::new(0, timeout * 1000, 0, 0, 0);
     let swap = 5000;
-    let ladder = TemperatureLadder(vec![Temperature::new(2.0, 1.0)]);
-    let mut chain = ParallelTempering::new(h0, &[], ladder, swap, rng);
+    //let ladder = TemperatureLadder(vec![Temperature::new(2.0, 1.0)]);
+    let ladder = TemperatureLadder(vec![
+        Temperature::new(temp(0, 5, 1), temp(0, 5, 1)),
+        Temperature::new(temp(1, 5, 1), temp(1, 5, 1)),
+        Temperature::new(temp(2, 5, 1), temp(2, 5, 1)),
+        Temperature::new(temp(3, 5, 1), temp(3, 5, 1)),
+        Temperature::new(temp(4, 5, 1), temp(4, 5, 1)),
+    ]);
+    let mut chain1 = ParallelTempering::new(h01, &[], ladder.clone(), swap, rng);
+    let mut chain2 = ParallelTempering::new(h02, &[], ladder, swap, rng);
     let mut best;
-    let train_data = (0..=train_set_size)
+    let data = (1..=n_trials)
         .map(|n| convert_examples_to_data(&examples[..n]))
         .collect_vec();
-    let borrowed_data = train_data
-        .iter()
-        .map(|x| x.iter().collect_vec())
-        .collect_vec();
-    for n_data in 0..=train_set_size {
+    let borrowed_data = data.iter().map(|x| x.iter().collect_vec()).collect_vec();
+    for n_data in 0..n_trials {
         update_data_mcmc(
-            &mut chain,
+            &mut chain1,
             &mut top_n,
             &borrowed_data[n_data],
             params.simulation.top_n,
         );
-        ctl.runtime += timeout * 1000;
-        best = std::f64::INFINITY;
-        {
-            while let Some(sample) = chain.internal_next(&mut ctl, rng) {
-                print_hypothesis_mcmc(problem, order, n_data, &sample, false);
-                let score = -sample.at_temperature(Temperature::new(4.0, 1.0));
-                if score < best {
-                    writeln!(
-                        &mut best_file,
-                        "{}",
-                        hypothesis_string_mcmc(problem, order, n_data, &sample, true)
-                    )
-                    .expect("written");
-                    best = score;
-                }
-                top_n.add(ScoredItem {
-                    score,
-                    data: Box::new(MetaProgramHypothesisWrapper(sample.clone())),
-                });
-            }
+        update_data_mcmc(
+            &mut chain2,
+            &mut top_n,
+            &borrowed_data[n_data],
+            params.simulation.top_n,
+        );
+        for chain in chain1.pool.iter_mut() {
+            chain.1.set_temperature(Temperature::new(
+                temp(4, 5, n_data + 1),
+                temp(4, 5, n_data + 1),
+            ));
         }
-        if n_data == train_set_size {
-            let mut n_correct = 0;
-            let mut n_tried = 0;
-            let best = &top_n.least().unwrap().data.0.state;
-            for query in &examples[train_set_size..] {
-                let correct = process_prediction(query, &best.trs, params);
-                n_correct += correct as usize;
-                n_tried += 1;
+        for chain in chain2.pool.iter_mut() {
+            chain.1.set_temperature(Temperature::new(
+                temp(4, 5, n_data + 1),
+                temp(4, 5, n_data + 1),
+            ));
+        }
+        ctl1.runtime += timeout * 1000;
+        ctl2.runtime += timeout * 1000;
+        best = std::f64::INFINITY;
+        while let (Some(sample1), Some(sample2)) = (
+            chain1.internal_next(&mut ctl1, rng),
+            chain2.internal_next(&mut ctl2, rng),
+        ) {
+            print_hypothesis_mcmc(problem, order, n_data, &sample1, true, None);
+            let score = -sample1.at_temperature(Temperature::new(4.0, 1.0));
+            if score < best {
+                writeln!(
+                    &mut best_file,
+                    "{}",
+                    hypothesis_string_mcmc(problem, order, n_data, &sample1, true, None)
+                )
+                .expect("written");
+                best = score;
             }
+            top_n.add(ScoredItem {
+                score,
+                data: Box::new(MetaProgramHypothesisWrapper(sample1.clone())),
+            });
+            print_hypothesis_mcmc(problem, order, n_data, &sample2, true, None);
+            let score = -sample2.at_temperature(Temperature::new(4.0, 1.0));
+            if score < best {
+                writeln!(
+                    &mut best_file,
+                    "{}",
+                    hypothesis_string_mcmc(problem, order, n_data, &sample2, true, None)
+                )
+                .expect("written");
+                best = score;
+            }
+            top_n.add(ScoredItem {
+                score,
+                data: Box::new(MetaProgramHypothesisWrapper(sample2.clone())),
+            });
+        }
+        let h_best = &top_n.least().unwrap().data.0;
+        let query = &examples[n_data];
+        let correct = process_prediction(query, &h_best.state.trs, params);
+        writeln!(
+            prediction_file,
+            "{}",
+            hypothesis_string_mcmc(problem, order, n_data, &h_best, true, Some(correct))
+        )
+        .ok();
+        if n_data + 1 == n_trials {
+            let best = &top_n.least().unwrap().data.0.state;
             println!("# END OF SEARCH");
             println!("# top hypotheses:");
             top_n.iter().sorted().enumerate().rev().for_each(|(i, h)| {
                 println!(
                     "# {}\t{}",
                     i,
-                    hypothesis_string_mcmc(problem, order, train_set_size, &h.data.0, true)
+                    hypothesis_string_mcmc(problem, order, n_data, &h.data.0, true, None)
                 )
             });
             println!("#");
             println!("# problem: {}", problem);
             println!("# order: {}", order);
-            println!("# samples: {:?}", chain.samples());
-            println!("# acceptance ratio: {:?}", chain.acceptance_ratio());
-            println!("# swap ratio: {:?}", chain.swaps());
+            println!("# samples 1: {:?}", chain1.samples());
+            println!("# samples 2: {:?}", chain2.samples());
+            println!("# acceptance ratio 1: {:?}", chain1.acceptance_ratio());
+            println!("# acceptance ratio 2: {:?}", chain2.acceptance_ratio());
+            println!("# swap ratio 1: {:?}", chain1.swaps());
+            println!("# swap ratio 2: {:?}", chain2.swaps());
             println!("# best hypothesis metaprogram: {}", best.path);
             println!(
                 "# best hypothesis TRS: {}",
                 best.trs.to_string().lines().join(" ")
             );
-            println!("# correct predictions rational: {}/{}", n_correct, n_tried);
-            // TODO: fix search time
         }
     }
+    // TODO: fix search time
     Ok(0.0)
 }
 
@@ -335,13 +398,13 @@ fn search_batch<'ctx, 'b, R: Rng>(
             chain1.internal_next(&mut ctl1, rng),
             chain2.internal_next(&mut ctl2, rng),
         ) {
-            print_hypothesis_mcmc(problem, order, train_set_size, &sample1, false);
+            print_hypothesis_mcmc(problem, order, train_set_size, &sample1, false, None);
             let score = -sample1.at_temperature(Temperature::new(4.0, 1.0));
             if score < best {
                 writeln!(
                     &mut best_file,
                     "{}",
-                    hypothesis_string_mcmc(problem, order, train_set_size, &sample1, true)
+                    hypothesis_string_mcmc(problem, order, train_set_size, &sample1, true, None)
                 )
                 .expect("written");
                 best = score;
@@ -350,13 +413,13 @@ fn search_batch<'ctx, 'b, R: Rng>(
                 score,
                 data: Box::new(MetaProgramHypothesisWrapper(sample1.clone())),
             });
-            print_hypothesis_mcmc(problem, order, train_set_size, &sample2, false);
+            print_hypothesis_mcmc(problem, order, train_set_size, &sample2, false, None);
             let score = -sample2.at_temperature(Temperature::new(4.0, 1.0));
             if score < best {
                 writeln!(
                     &mut best_file,
                     "{}",
-                    hypothesis_string_mcmc(problem, order, train_set_size, &sample2, true)
+                    hypothesis_string_mcmc(problem, order, train_set_size, &sample2, true, None)
                 )
                 .expect("written");
                 best = score;
@@ -381,7 +444,7 @@ fn search_batch<'ctx, 'b, R: Rng>(
         println!(
             "# {}\t{}",
             i,
-            hypothesis_string_mcmc(problem, order, train_set_size, &h.data.0, false)
+            hypothesis_string_mcmc(problem, order, train_set_size, &h.data.0, false, None)
         )
     });
     println!("#");
@@ -423,11 +486,12 @@ fn print_hypothesis_mcmc(
     order: usize,
     trial: usize,
     h: &MetaProgramHypothesis,
-    print_trs: bool,
+    print_meta: bool,
+    correct: Option<bool>,
 ) {
     println!(
         "{}",
-        hypothesis_string_mcmc(problem, order, trial, h, print_trs)
+        hypothesis_string_mcmc(problem, order, trial, h, print_meta, correct)
     );
 }
 
@@ -436,7 +500,8 @@ fn hypothesis_string_mcmc(
     order: usize,
     trial: usize,
     h: &MetaProgramHypothesis,
-    print_trs: bool,
+    print_meta: bool,
+    correct: Option<bool>,
 ) -> String {
     hypothesis_string_inner(
         problem,
@@ -453,8 +518,8 @@ fn hypothesis_string_mcmc(
             h.ln_acc,
             h.at_temperature(Temperature::new(4.0, 1.0)),
         ],
-        None,
-        print_trs,
+        correct,
+        print_meta,
     )
 }
 
@@ -467,24 +532,56 @@ fn hypothesis_string_inner(
     time: usize,
     count: usize,
     objective: &[f64],
-    _correct: Option<bool>,
-    print_trs: bool,
+    correct: Option<bool>,
+    print_meta: bool,
 ) -> String {
     //let trs_str = trs.to_string().lines().join(" ");
     let trs_len = trs.size();
     let objective_string = format!("{: >10.4}", objective.iter().format("\t"));
     let meta_string = format!("{}", moves.iter().format("."));
     let trs_string = format!("{}", trs).lines().join(" ");
-    if print_trs {
-        format!(
-            "{}\t{}\t{}\t{}\t{}\t{}\t{}\t\"{}\"\t",
-            problem, order, trial, trs_len, objective_string, count, time, trs_string
-        )
-    } else {
-        format!(
-            "{}\t{}\t{}\t{}\t{}\t{}\t{}\t\"{}\"\t\"{}\"",
-            problem, order, trial, trs_len, objective_string, count, time, trs_string, meta_string
-        )
+    match (print_meta, correct) {
+        (false, None) => {
+            format!(
+                "{}\t{}\t{}\t{}\t{}\t{}\t{}\t\"{}\"",
+                problem, order, trial, trs_len, objective_string, count, time, trs_string
+            )
+        }
+        (false, Some(c)) => {
+            format!(
+                "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t\"{}\"",
+                problem, order, trial, trs_len, objective_string, count, time, c, trs_string
+            )
+        }
+        (true, None) => {
+            format!(
+                "{}\t{}\t{}\t{}\t{}\t{}\t{}\t\"{}\"\t\"{}\"",
+                problem,
+                order,
+                trial,
+                trs_len,
+                objective_string,
+                count,
+                time,
+                trs_string,
+                meta_string
+            )
+        }
+        (true, Some(c)) => {
+            format!(
+                "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t\"{}\"\t\"{}\"",
+                problem,
+                order,
+                trial,
+                trs_len,
+                objective_string,
+                count,
+                time,
+                c,
+                trs_string,
+                meta_string
+            )
+        }
     }
 }
 
@@ -505,17 +602,9 @@ fn update_data_mcmc<'a, 'b>(
     // 1. Update the chain.
     match top_n.least() {
         Some(best) => {
-            println!(
-                "BEST: {}",
-                format!("{}", best.data.0.state.trs).lines().join(" ")
-            );
             chain.set_data(data, true);
             for (_, thread) in chain.pool.iter_mut() {
                 thread.current_mut().clone_from(&best.data.0);
-                println!(
-                    "UPDATE: {}",
-                    format!("{}", thread.current().state.trs).lines().join(" ")
-                );
             }
         }
         None => {

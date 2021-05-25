@@ -11,10 +11,12 @@ use programinduction::trs::{
 use rand::Rng;
 use serde_derive::{Deserialize, Serialize};
 use std::{
-    cmp::Ordering, collections::BinaryHeap, fs::read_to_string, ops::Deref, path::PathBuf,
-    process::exit,
+    cmp::Ordering, collections::BinaryHeap, fs::read_to_string, io::Write, ops::Deref,
+    path::PathBuf, process::exit,
 };
 use term_rewriting::{trace::Trace, NumberRepresentation, Operator, Rule, RuleContext, Term};
+
+pub type Prediction = (usize, String);
 
 pub fn start_section(s: &str) {
     println!("#\n# {}\n# {}", s, "-".repeat(s.len()));
@@ -48,6 +50,13 @@ pub fn str_err<T, U: ToString>(x: Result<T, U>) -> Result<T, String> {
 pub fn path_to_string(dir: &str, file: &str) -> Result<String, String> {
     let path: PathBuf = [dir, file].iter().collect();
     str_err(read_to_string(path))
+}
+
+pub fn init_csv_fd(filename: &str, header: &str) -> Result<std::fs::File, String> {
+    let mut fd = str_err(std::fs::File::create(filename))?;
+    str_err(writeln!(fd, "{}", header))?;
+    Ok(fd)
+    //"problem,run,order,trial,time,count,lmeta,ltrs,lgen,lacc,lposterior,accuracy,trs,metaprogram"
 }
 
 pub fn try_trs<'ctx, 'b>(
