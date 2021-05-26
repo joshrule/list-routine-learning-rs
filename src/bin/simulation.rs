@@ -55,7 +55,7 @@ fn main() {
             problem_filename,
             best_filename,
             prediction_filename,
-            _all_filename,
+            sample_filename,
             _out_filename,
         ) = exit_err(load_args(), "Failed to load parameters");
         notice("loaded parameters", 0);
@@ -107,6 +107,11 @@ fn main() {
             &prediction_filename,
             "problem\torder\trun\ttrial\tsize\tlmeta\tltrs\tlgen\tlacc\tlposterior\ttime\tcount\taccuracy\ttrs\tmetaprogram",
         ), "failed to open predictions");
+        let mut sample_file = exit_err(init_csv_fd(
+            &sample_filename,
+            "problem\torder\trun\ttrial\tsize\tlmeta\tltrs\tlgen\tlacc\tlposterior\ttime\tcount\ttrs\tmetaprogram",
+        ), "failed to open best");
+        let mut reservoir = Reservoir::with_capacity(10000);
         for run in 0..runs {
             exit_err(
                 search_online(
@@ -118,10 +123,14 @@ fn main() {
                     (&problem, order, run),
                     &mut best_file,
                     &mut prediction_file,
+                    &mut reservoir,
                     rng,
                 ),
                 "search failed",
             );
+        }
+        for item in reservoir.to_vec().into_iter().map(|item| item.data) {
+            exit_err(str_err(writeln!(sample_file, "{}", item)), "bad file");
         }
         let total_time = start.elapsed().as_secs_f64();
         notice(format!("total time: {:.3}s", total_time), 0);
@@ -182,6 +191,7 @@ fn search_online<'ctx, 'b, R: Rng>(
     (problem, order, run): (&str, usize, usize),
     best_file: &mut File,
     prediction_file: &mut File,
+    reservoir: &mut Reservoir<String>,
     rng: &mut R,
 ) -> Result<f64, String> {
     let now = Instant::now();
@@ -264,7 +274,9 @@ fn search_online<'ctx, 'b, R: Rng>(
             chain1.internal_next(&mut ctl1, rng),
             chain2.internal_next(&mut ctl2, rng),
         ) {
-            print_hypothesis_mcmc(problem, order, run, n_data, &sample1, true, None);
+            if params.simulation.verbose {
+                print_hypothesis_mcmc(problem, order, run, n_data, &sample1, true, None);
+            }
             let score = -sample1.at_temperature(Temperature::new(4.0, 1.0));
             if score < best {
                 writeln!(
@@ -279,7 +291,13 @@ fn search_online<'ctx, 'b, R: Rng>(
                 score,
                 data: Box::new(MetaProgramHypothesisWrapper(sample1.clone())),
             });
-            print_hypothesis_mcmc(problem, order, run, n_data, &sample2, true, None);
+            reservoir.add(
+                || hypothesis_string_mcmc(problem, order, run, n_data, &sample1, true, None),
+                rng,
+            );
+            if params.simulation.verbose {
+                print_hypothesis_mcmc(problem, order, run, n_data, &sample2, true, None);
+            }
             let score = -sample2.at_temperature(Temperature::new(4.0, 1.0));
             if score < best {
                 writeln!(
@@ -294,6 +312,10 @@ fn search_online<'ctx, 'b, R: Rng>(
                 score,
                 data: Box::new(MetaProgramHypothesisWrapper(sample2.clone())),
             });
+            reservoir.add(
+                || hypothesis_string_mcmc(problem, order, run, n_data, &sample2, true, None),
+                rng,
+            );
         }
         search_time += trial_start.elapsed().as_secs_f64();
         let h_best = &top_n.least().unwrap().data.0;
