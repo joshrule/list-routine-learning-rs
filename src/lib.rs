@@ -612,3 +612,144 @@ mod tests {
         assert_eq!(data, vec![0, 1, 2, 2, 3]);
     }
 }
+
+// pub fn search_batch<'ctx, 'b, R: Rng>(
+//     lex: Lexicon<'ctx, 'b>,
+//     background: &'b [Rule],
+//     examples: &'b [Rule],
+//     train_set_size: usize,
+//     params: &mut Params,
+//     (problem, order): (&str, usize),
+//     best_filename: &str,
+//     rng: &mut R,
+// ) -> Result<f64, String> {
+//     let now = Instant::now();
+//     let mut best_file = std::fs::File::create(best_filename).expect("file");
+//     let mut top_n: TopN<Box<MetaProgramHypothesisWrapper>> = TopN::new(params.simulation.top_n);
+//     // TODO: hacked in constants.
+//     let mpctl1 = MetaProgramControl::new(
+//         &[],
+//         &params.model,
+//         LearningMode::Refactor,
+//         params.mcts.atom_weights,
+//         7,
+//         50,
+//     );
+//     let mpctl2 = MetaProgramControl::new(
+//         &[],
+//         &params.model,
+//         LearningMode::Sample,
+//         params.mcts.atom_weights,
+//         2,
+//         22,
+//     );
+//     let timeout = params.simulation.timeout;
+//     let train_data = convert_examples_to_data(&examples[..train_set_size]);
+//     let borrowed_data = train_data.iter().collect_vec();
+//     let mut t0 = TRS::new_unchecked(&lex, params.simulation.deterministic, background, vec![]);
+//     t0.set_bounds(params.simulation.lo, params.simulation.hi);
+//     t0.identify_symbols();
+//     let p0 = MetaProgram::from(t0);
+//     // No need to compute posterior. `chain` will do that for us.
+//     let h01 = MetaProgramHypothesis::new(mpctl1, &p0);
+//     let h02 = MetaProgramHypothesis::new(mpctl2, &p0);
+//     let mut ctl1 = Control::new(0, timeout * 1000, 0, 0, 0);
+//     let mut ctl2 = Control::new(0, timeout * 1000, 0, 0, 0);
+//     let swap = 5000;
+//     //let ladder = TemperatureLadder(vec![
+//     //    Temperature::new(temp(0, 5, 12), temp(0, 5, 12)),
+//     //    Temperature::new(temp(1, 5, 12), temp(1, 5, 12)),
+//     //    Temperature::new(temp(2, 5, 12), temp(2, 5, 12)),
+//     //    Temperature::new(temp(3, 5, 12), temp(3, 5, 12)),
+//     //    Temperature::new(temp(4, 5, 12), temp(4, 5, 12)),
+//     //]);
+//     let ladder = TemperatureLadder(vec![Temperature::new(2.0, 1.0)]);
+//     //let ladder = TemperatureLadder(vec![Temperature::new(2.0 * temp(4, 5, 12), temp(4, 5, 12))]);
+//     let mut chain1 = ParallelTempering::new(h01, &borrowed_data, ladder.clone(), swap, rng);
+//     let mut chain2 = ParallelTempering::new(h02, &borrowed_data, ladder, swap, rng);
+//     update_data_mcmc(
+//         &mut chain1,
+//         &mut top_n,
+//         &borrowed_data,
+//         params.simulation.top_n,
+//     );
+//     update_data_mcmc(
+//         &mut chain2,
+//         &mut top_n,
+//         &borrowed_data,
+//         params.simulation.top_n,
+//     );
+//     let mut best = std::f64::INFINITY;
+//     {
+//         println!("# drawing samples: {}ms", now.elapsed().as_millis());
+//         while let (Some(sample1), Some(sample2)) = (
+//             chain1.internal_next(&mut ctl1, rng),
+//             chain2.internal_next(&mut ctl2, rng),
+//         ) {
+//             print_hypothesis_mcmc(problem, order, 1, train_set_size, &sample1, false, None);
+//             let score = -sample1.at_temperature(Temperature::new(4.0, 1.0));
+//             if score < best {
+//                 writeln!(
+//                     &mut best_file,
+//                     "{}",
+//                     hypothesis_string_mcmc(problem, order, 1, train_set_size, &sample1, true, None)
+//                 )
+//                 .expect("written");
+//                 best = score;
+//             }
+//             top_n.add(ScoredItem {
+//                 score,
+//                 data: Box::new(MetaProgramHypothesisWrapper(sample1.clone())),
+//             });
+//             print_hypothesis_mcmc(problem, order, 1, train_set_size, &sample2, false, None);
+//             let score = -sample2.at_temperature(Temperature::new(4.0, 1.0));
+//             if score < best {
+//                 writeln!(
+//                     &mut best_file,
+//                     "{}",
+//                     hypothesis_string_mcmc(problem, order, 1, train_set_size, &sample2, true, None)
+//                 )
+//                 .expect("written");
+//                 best = score;
+//             }
+//             top_n.add(ScoredItem {
+//                 score,
+//                 data: Box::new(MetaProgramHypothesisWrapper(sample2.clone())),
+//             });
+//         }
+//     }
+//     let mut n_correct = 0;
+//     let mut n_tried = 0;
+//     let best = &top_n.least().unwrap().data.0.state;
+//     for query in &examples[train_set_size..] {
+//         let correct = process_prediction(query, &best.trs, params);
+//         n_correct += correct as usize;
+//         n_tried += 1;
+//     }
+//     println!("# END OF SEARCH");
+//     println!("# top hypotheses:");
+//     top_n.iter().sorted().enumerate().rev().for_each(|(i, h)| {
+//         println!(
+//             "# {}\t{}",
+//             i,
+//             hypothesis_string_mcmc(problem, order, 1, train_set_size, &h.data.0, false, None)
+//         )
+//     });
+//     println!("#");
+//     println!("# problem: {}", problem);
+//     println!("# order: {}", order);
+//     println!("# samples 1: {:?}", chain1.samples());
+//     println!("# samples 2: {:?}", chain2.samples());
+//     println!("# acceptance ratio 1: {:?}", chain1.acceptance_ratio());
+//     println!("# acceptance ratio 2: {:?}", chain2.acceptance_ratio());
+//     println!("# swap ratio 1: {:?}", chain1.swaps());
+//     println!("# swap ratio 2: {:?}", chain2.swaps());
+//     println!("# best hypothesis metaprogram: {}", best.path);
+//     println!(
+//         "# best hypothesis TRS: {}",
+//         best.trs.to_string().lines().join(" ")
+//     );
+//     println!("# correct predictions rational: {}/{}", n_correct, n_tried);
+//     // TODO: fix search time
+//     Ok(0.0)
+// }

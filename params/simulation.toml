@@ -1,5 +1,8 @@
 [simulation]
 
+# How much do you print?
+verbose = false
+
 # The location of the signature.
 signature = "params/signature.txt"
 
@@ -13,7 +16,12 @@ n_predictions = 11
 # n_predictions = 2
 
 # Search for at most this many seconds for each datum.
+# timeout = 28800
+# timeout = 7200
+# timeout = 3600
+# timeout = 1800
 # timeout = 1200
+# timeout = 900
 # timeout = 600
 # timeout = 300
 # timeout = 180
@@ -21,6 +29,7 @@ n_predictions = 11
 # timeout = 90
 timeout = 60
 # timeout = 30
+# timeout = 20
 # timeout = 10
 # timeout = 5
 # timeout = 2

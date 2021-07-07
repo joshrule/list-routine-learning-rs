@@ -138,8 +138,7 @@ fn main() {
 }
 
 fn temp(i: usize, n: usize, max_t: usize) -> f64 {
-    let temp = (i as f64 * (max_t as f64).ln() / ((n - 1) as f64)).exp();
-    temp
+    (i as f64 * (max_t as f64).ln() / ((n - 1) as f64)).exp()
 }
 
 fn load_args() -> Result<(Params, usize, String, String, String, String, String), String> {
@@ -254,16 +253,16 @@ fn search_online<'ctx, 'b, R: Rng>(
             &borrowed_data[n_data],
             params.simulation.top_n,
         );
-        for chain in chain1.pool.iter_mut() {
+        for (i, chain) in chain1.pool.iter_mut().enumerate() {
             chain.1.set_temperature(Temperature::new(
-                temp(4, 5, n_data + 1),
-                temp(4, 5, n_data + 1),
+                1.0,
+                temp(i, 5, n_data + 1),
             ));
         }
-        for chain in chain2.pool.iter_mut() {
+        for (i, chain) in chain2.pool.iter_mut().enumerate() {
             chain.1.set_temperature(Temperature::new(
-                temp(4, 5, n_data + 1),
-                temp(4, 5, n_data + 1),
+                1.0,
+                temp(i, 5, n_data + 1),
             ));
         }
         ctl1.runtime += timeout * 1000;
