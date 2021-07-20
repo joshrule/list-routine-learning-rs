@@ -220,8 +220,8 @@ fn search_online<'ctx, 'b, R: Rng>(
     let p0 = MetaProgram::from(t0);
     let h01 = MetaProgramHypothesis::new(mpctl1, &p0);
     let h02 = MetaProgramHypothesis::new(mpctl2, &p0);
-    let mut ctl1 = Control::new(0, timeout * 1000, 0, 0, 0);
-    let mut ctl2 = Control::new(0, timeout * 1000, 0, 0, 0);
+    let mut ctl1 = Control::new(0, 0, 0, 0, 0);
+    let mut ctl2 = Control::new(0, 0, 0, 0, 0);
     let swap = 5000;
     //let ladder = TemperatureLadder(vec![Temperature::new(2.0, 1.0)]);
     let ladder = TemperatureLadder(vec![
@@ -231,6 +231,7 @@ fn search_online<'ctx, 'b, R: Rng>(
         Temperature::new(temp(3, 5, 1), temp(3, 5, 1)),
         Temperature::new(temp(4, 5, 1), temp(4, 5, 1)),
     ]);
+    // All of the computational work pre-search is here.
     let mut chain1 = ParallelTempering::new(h01, &[], ladder.clone(), swap, rng);
     let mut chain2 = ParallelTempering::new(h02, &[], ladder, swap, rng);
     let mut best;
@@ -254,20 +255,18 @@ fn search_online<'ctx, 'b, R: Rng>(
             params.simulation.top_n,
         );
         for (i, chain) in chain1.pool.iter_mut().enumerate() {
-            chain.1.set_temperature(Temperature::new(
-                1.0,
-                temp(i, 5, n_data + 1),
-            ));
+            chain
+                .1
+                .set_temperature(Temperature::new(1.0, temp(i, 5, n_data + 1)));
         }
         for (i, chain) in chain2.pool.iter_mut().enumerate() {
-            chain.1.set_temperature(Temperature::new(
-                1.0,
-                temp(i, 5, n_data + 1),
-            ));
+            chain
+                .1
+                .set_temperature(Temperature::new(1.0, temp(i, 5, n_data + 1)));
         }
-        ctl1.runtime += timeout * 1000;
-        ctl2.runtime += timeout * 1000;
         best = std::f64::INFINITY;
+        ctl1.extend_runtime(timeout * 1000);
+        ctl2.extend_runtime(timeout * 1000);
         let trial_start = Instant::now();
         while let (Some(sample1), Some(sample2)) = (
             chain1.internal_next(&mut ctl1, rng),
@@ -351,8 +350,18 @@ fn search_online<'ctx, 'b, R: Rng>(
                 "# best hypothesis TRS: {}",
                 best.trs.to_string().lines().join(" ")
             );
-            println!("# search time (s): {}", search_time);
-            println!("# run time (s): {}", now.elapsed().as_secs_f64());
+            println!("# search time (s): {:.4}", search_time);
+            println!("# run time (s): {:.4}", now.elapsed().as_secs_f64());
+            println!(
+                "# mean search time / trial (s): {:.4}",
+                search_time / (n_trials as f64)
+            );
+            println!(
+                "# mean samples/sec: {:.4}",
+                (chain1.samples().iter().sum::<usize>() as f64
+                    + chain2.samples().iter().sum::<usize>() as f64)
+                    / search_time
+            );
         }
     }
     Ok(search_time)
