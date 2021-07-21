@@ -416,6 +416,7 @@ pub struct SimulationParams {
     pub background: String,
     pub top_n: usize,
     pub verbose: bool,
+    pub p_refactor: f64,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

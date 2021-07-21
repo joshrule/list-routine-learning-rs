@@ -56,6 +56,8 @@ temperature = 1.0
 # What's the temperature of the TRS prior vs. the Metaprogram prior?
 trs_temperature = 10.0
 
+p_refactor = 0.5
+
 [mcts]
 
 # The maximum number of search moves that can be chained together.

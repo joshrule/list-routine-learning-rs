@@ -22,7 +22,10 @@ use programinduction::{
         Datum as TRSDatum, Lexicon, TRS,
     },
 };
-use rand::{thread_rng, Rng};
+use rand::{
+    distributions::{Distribution, WeightedIndex},
+    thread_rng, Rng,
+};
 use regex::Regex;
 use std::{
     f64,
@@ -239,6 +242,11 @@ fn search_online<'ctx, 'b, R: Rng>(
         .map(|n| convert_examples_to_data(&examples[..n]))
         .collect_vec();
     let borrowed_data = data.iter().map(|x| x.iter().collect_vec()).collect_vec();
+    let dist = WeightedIndex::new(&[
+        params.simulation.p_refactor,
+        1.0 - params.simulation.p_refactor,
+    ])
+    .unwrap();
     for n_data in 0..n_trials {
         update_data_mcmc(
             &mut chain1,
@@ -268,52 +276,54 @@ fn search_online<'ctx, 'b, R: Rng>(
         ctl1.extend_runtime(timeout * 1000);
         ctl2.extend_runtime(timeout * 1000);
         let trial_start = Instant::now();
-        while let (Some(sample1), Some(sample2)) = (
-            chain1.internal_next(&mut ctl1, rng),
-            chain2.internal_next(&mut ctl2, rng),
-        ) {
-            if params.simulation.verbose {
-                print_hypothesis_mcmc(problem, order, run, n_data, &sample1, true, None);
+        let mut active_1 = params.simulation.p_refactor > 0.0;
+        let mut active_2 = (1.0 - params.simulation.p_refactor) > 0.0;
+        while active_1 || active_2 {
+            // pick the thing to sample from
+            let idx = dist.sample(rng);
+            // Sample from it
+            let sample = if idx == 0 {
+                chain1.internal_next(&mut ctl1, rng)
+            } else {
+                chain2.internal_next(&mut ctl2, rng)
+            };
+            // Process the sample
+            match sample {
+                None => {
+                    if idx == 0 {
+                        active_1 = false;
+                    } else {
+                        active_2 = false;
+                    }
+                }
+                Some(sample) => {
+                    if params.simulation.verbose {
+                        print_hypothesis_mcmc(problem, order, run, n_data, &sample, true, None);
+                    }
+                    let score = -sample.at_temperature(Temperature::new(4.0, 1.0));
+                    if score < best {
+                        writeln!(
+                            best_file,
+                            "{}",
+                            hypothesis_string_mcmc(
+                                problem, order, run, n_data, &sample, true, None
+                            )
+                        )
+                        .expect("written");
+                        best = score;
+                    }
+                    top_n.add(ScoredItem {
+                        score,
+                        data: Box::new(MetaProgramHypothesisWrapper(sample.clone())),
+                    });
+                    reservoir.add(
+                        || hypothesis_string_mcmc(problem, order, run, n_data, &sample, true, None),
+                        rng,
+                    );
+                }
             }
-            let score = -sample1.at_temperature(Temperature::new(4.0, 1.0));
-            if score < best {
-                writeln!(
-                    best_file,
-                    "{}",
-                    hypothesis_string_mcmc(problem, order, run, n_data, &sample1, true, None)
-                )
-                .expect("written");
-                best = score;
-            }
-            top_n.add(ScoredItem {
-                score,
-                data: Box::new(MetaProgramHypothesisWrapper(sample1.clone())),
-            });
-            reservoir.add(
-                || hypothesis_string_mcmc(problem, order, run, n_data, &sample1, true, None),
-                rng,
-            );
-            if params.simulation.verbose {
-                print_hypothesis_mcmc(problem, order, run, n_data, &sample2, true, None);
-            }
-            let score = -sample2.at_temperature(Temperature::new(4.0, 1.0));
-            if score < best {
-                writeln!(
-                    best_file,
-                    "{}",
-                    hypothesis_string_mcmc(problem, order, run, n_data, &sample2, true, None)
-                )
-                .expect("written");
-                best = score;
-            }
-            top_n.add(ScoredItem {
-                score,
-                data: Box::new(MetaProgramHypothesisWrapper(sample2.clone())),
-            });
-            reservoir.add(
-                || hypothesis_string_mcmc(problem, order, run, n_data, &sample2, true, None),
-                rng,
-            );
+            active_1 = active_1 && ctl1.running();
+            active_2 = active_2 && ctl2.running();
         }
         search_time += trial_start.elapsed().as_secs_f64();
         let h_best = &top_n.least().unwrap().data.0;
