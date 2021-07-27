@@ -1,6 +1,7 @@
 [simulation]
 
 # How much do you print?
+# verbose = true
 verbose = false
 
 # The location of the signature.
@@ -10,10 +11,8 @@ signature = "params/signature.txt"
 background = "params/background.txt"
 
 # Make this many predictions.
-n_predictions = 11
-# n_predictions = 8
-# n_predictions = 5
-# n_predictions = 2
+# n_predictions = 11
+n_predictions = 8
 
 # Search for at most this many seconds for each datum.
 # timeout = 28800
@@ -50,13 +49,12 @@ hi = 9
 # How many hypotheses do we preserve across trials?
 top_n = 100
 
-# What's the likelihood temperature?
-temperature = 1.0
-
-# What's the temperature of the TRS prior vs. the Metaprogram prior?
-trs_temperature = 10.0
-
+# p_refactor = 1.0
 p_refactor = 0.5
+# p_refactor = 0.0
+
+mode = "Batch"
+# mode = "Online"
 
 [mcts]
 
