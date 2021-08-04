@@ -485,8 +485,8 @@ pub struct Params {
 #[derive(Serialize, Deserialize, Clone)]
 pub struct SimulationParams {
     pub timeout: usize,
+    pub steps: usize,
     pub n_predictions: usize,
-    pub confidence: f64,
     pub deterministic: bool,
     pub lo: usize,
     pub hi: usize,
@@ -709,6 +709,7 @@ pub fn search_online<'ctx, 'b, R: Rng>(
     let mut search_time = 0.0;
     let mut top_n: TopN<Box<MetaProgramHypothesisWrapper>> = TopN::new(params.simulation.top_n);
     let timeout = params.simulation.timeout;
+    let steps = params.simulation.steps;
     // TODO: hacked in constants.
     let mpctl1 = MetaProgramControl::new(
         &[],
@@ -788,6 +789,7 @@ pub fn search_online<'ctx, 'b, R: Rng>(
     ])
     .unwrap();
     for n_data in 0..n_trials {
+        println!("#   starting trial {}", n_data);
         update_data_mcmc(
             &mut chain1,
             &mut top_n,
@@ -821,6 +823,7 @@ pub fn search_online<'ctx, 'b, R: Rng>(
                 .set_temperature(Temperature::new(1.0, temp(i, 5, n_data + 1)));
         }
         ctl.extend_runtime(timeout * 1000);
+        ctl.extend_steps(steps);
         let mut active_1 = params.simulation.p_refactor > 0.0;
         let mut active_2 = (1.0 - params.simulation.p_refactor) > 0.0;
         let trial_start = Instant::now();
@@ -920,6 +923,7 @@ pub fn search_batch<'ctx, 'b, R: Rng>(
     let now = Instant::now();
     let mut top_n: TopN<Box<MetaProgramHypothesisWrapper>> = TopN::new(params.simulation.top_n);
     let timeout = params.simulation.timeout;
+    let steps = params.simulation.steps;
     // TODO: hacked in constants.
     let mpctl1 = MetaProgramControl::new(
         &[],
@@ -943,7 +947,7 @@ pub fn search_batch<'ctx, 'b, R: Rng>(
     let p0 = MetaProgram::from(t0);
     let h01 = MetaProgramHypothesis::new(mpctl1, &p0);
     let h02 = MetaProgramHypothesis::new(mpctl2, &p0);
-    let mut ctl = Control::new(0, timeout * 1000, 0, 0, 0);
+    let mut ctl = Control::new(steps, timeout * 1000, 0, 0, 0);
     let swap = 5000;
     let ladder = TemperatureLadder(vec![
         Temperature::new(1.0, temp(0, 5, n_data + 1)),
@@ -1151,14 +1155,22 @@ fn summarize_search<'a, 'b>(
         "# best hypothesis TRS: {}",
         best.trs.to_string().lines().join(" ")
     );
-    println!("# search time (s): {:.4}", search_time);
     println!("# run time (s): {:.4}", run_time);
+    println!("# search time (s): {:.4}", search_time);
     println!(
         "# mean search time / trial (s): {:.4}",
         search_time / (n_trials as f64)
     );
     println!(
-        "# mean samples/sec: {:.4}",
+        "# steps: {}",
+        chain1
+            .samples()
+            .iter()
+            .chain(&chain2.samples())
+            .sum::<usize>()
+    );
+    println!(
+        "# mean steps/sec: {:.4}",
         (chain1.samples().iter().sum::<usize>() as f64
             + chain2.samples().iter().sum::<usize>() as f64)
             / search_time

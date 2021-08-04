@@ -1,6 +1,6 @@
 [simulation]
 
-# How much do you print?
+# Print debugging information?
 # verbose = true
 verbose = false
 
@@ -33,10 +33,10 @@ timeout = 60
 # timeout = 5
 # timeout = 2
 # timeout = 1
+# timeout = 0
 
-# Scale generations_per_datum by this factor after each prediction (multiply
-# for good performance, divide for bad performance).
-confidence = 1.0
+steps = 1000
+# steps = 0
 
 # Only learn deterministic TRSs.
 deterministic = true
