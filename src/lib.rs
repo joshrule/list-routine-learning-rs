@@ -229,6 +229,58 @@ pub fn process_prediction<'ctx, 'b>(query: &Rule, best: &TRS<'ctx, 'b>, params: 
     query.rhs[0] == make_prediction(best, &query.lhs, params)
 }
 
+pub fn includes_output<'a, 'b>(
+    trs: &TRS<'a, 'b>,
+    lex: &mut Lexicon<'a, 'b>,
+    input: &Term,
+    output: &Term,
+    params: &Params,
+) -> (f64, Vec<(Term, f64)>) {
+    let utrs = trs.full_utrs();
+    let sig = trs.lexicon().signature();
+    let patterns = utrs.patterns(sig);
+    let trace = Trace::new(
+        &utrs,
+        sig,
+        input,
+        params.model.likelihood.p_observe,
+        params.model.likelihood.max_steps,
+        params.model.likelihood.max_size,
+        &patterns,
+        params.model.likelihood.strategy,
+        params.model.likelihood.representation,
+    );
+    println!("mass: {}", trace.mass());
+    println!("depth: {}", trace.depth());
+    println!("size: {}", trace.size());
+    for (i, n) in trace.iter().enumerate() {
+        let nd = &trace[n];
+        println!(
+            "{}. {} {:.4} {} {} {}",
+            i,
+            nd.term().pretty(lex.signature()),
+            nd.log_p(),
+            nd.depth(),
+            nd.state(),
+            nd.is_leaf(),
+        )
+    }
+    let outputs = trace
+        .iter()
+        .filter(|n| trace[*n].state() == TraceState::Normal)
+        .sorted_by_key(|n| -(trace[*n].log_p() * 1e9) as usize)
+        .map(|n| (trace[n].term().clone(), trace[n].log_p()))
+        .collect_vec();
+    let p = trace.rewrites_to(output, |correct, predicted| {
+        if correct == predicted {
+            0.0
+        } else {
+            std::f64::NEG_INFINITY
+        }
+    });
+    (p, outputs)
+}
+
 fn make_prediction<'a, 'b>(trs: &TRS<'a, 'b>, input: &Term, params: &Params) -> Term {
     let utrs = trs.full_utrs();
     let lex = trs.lexicon();
