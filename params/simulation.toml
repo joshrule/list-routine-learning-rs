@@ -1,8 +1,8 @@
 [simulation]
 
 # Print debugging information?
-# verbose = true
-verbose = false
+verbose = true
+# verbose = false
 
 # The location of the signature.
 signature = "params/signature.txt"
@@ -11,8 +11,8 @@ signature = "params/signature.txt"
 background = "params/background.txt"
 
 # Make this many predictions.
-# n_predictions = 11
-n_predictions = 8
+n_predictions = 11
+# n_predictions = 8
 
 # Search for at most this many seconds for each datum.
 # timeout = 28800
@@ -26,9 +26,9 @@ n_predictions = 8
 # timeout = 180
 # timeout = 120
 # timeout = 90
-timeout = 60
+# timeout = 60
 # timeout = 30
-# timeout = 20
+timeout = 20
 # timeout = 10
 # timeout = 5
 # timeout = 2
@@ -50,41 +50,20 @@ hi = 9
 top_n = 100
 
 # p_refactor = 1.0
-p_refactor = 0.5
-# p_refactor = 0.0
+# p_refactor = 0.5
+p_refactor = 0.0
 
-mode = "Batch"
-# mode = "Online"
-
-[mcts]
-
-# The maximum number of search moves that can be chained together.
-max_depth = 50
-
-# The maximum number of states that can be searched.
-max_states = 1000000000
-
-max_revisions = 7
-
-max_size = 100
-
-invent = true
-
-atom_weights = [0.8, 1.0]
-
-selection = { "BestInSubtree" = { 0 = 5, 1 = 1.5 } }
+# mode = "Batch"
+mode = "Online"
 
 [model]
 
-# The reported posterior is (log_prior * p_temp + log_likelihood * l_temp) / schedule(t).
-p_temp = 1.0
-l_temp = 1.0
-
+# The reported posterior is (log_prior + log_likelihood) / schedule(t).
 # We don't anneal at all: schedule(t) = 1.0.
 schedule = "None"
 
 # The prior is generative: sample the number of rules and then sample each rule up to that number.
-prior = { "SimpleGenerative" = { p_rule = 0.5, atom_weights = [0.8, 1.0] } }
+prior = { "SimpleGenerative" = { p_rule = 0.5, w_var = 5.0 } }
 
 # The likelihood is generative: rewrite the observed input according to your
 # hypothesis and scale the probability of each computed output by the cost of
@@ -94,8 +73,6 @@ prior = { "SimpleGenerative" = { p_rule = 0.5, atom_weights = [0.8, 1.0] } }
 # each element, e, in the trace is adjusted to:
 # - p*0.9999 if e is a literal list (i.e. -0.0001 in ln-space)
 # - p*0.0001 if e is not a literal list (i.e. -9.2 in ln-space)
-#
-# alpha: This is the probability that we sampled an output rather than getting it by rewriting.
 [model.likelihood]
 decay = 0.0
 strategy = "Normal"
@@ -104,4 +81,4 @@ p_observe = 0.0
 max_steps = 120
 max_depth = 0
 max_size = 200
-single = { "ListPrefix" = { alpha = 0.000001, p_add = 0.0001, p_del = 0.0001 } }
+single = { "ListPrefix" = { p_add = 0.0001, p_del = 0.0001 } }

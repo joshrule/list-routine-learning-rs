@@ -17,9 +17,6 @@ HEAD(NIL) = NAN;
 HEAD(CONS(x_ y_)) = x_;
 
 # IF
-IFB(TRUE  x_ y_) = x_;
-IFB(FALSE x_ y_) = y_;
-
 IFN(TRUE  x_ y_) = x_;
 IFN(FALSE x_ y_) = y_;
 
