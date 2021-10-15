@@ -10,8 +10,8 @@ use programinduction::{
             LearningMode, MetaProgram, MetaProgramControl, MetaProgramHypothesis, Move, State,
             StateLabel, Temperature,
         },
-        parse_lexicon, parse_rulecontexts, parse_rules, parse_trs, Datum as TRSDatum, Lexicon,
-        ModelParams, SingleLikelihood, TRS,
+        parse_lexicon, parse_rulecontexts, parse_rules, parse_trs, Datum as TRSDatum, Lesion,
+        Lexicon, ModelParams, SingleLikelihood, TRS,
     },
 };
 use rand::{
@@ -763,13 +763,18 @@ pub fn search_online<'ctx, 'b, R: Rng>(
     rng: &mut R,
 ) -> Result<f64, String> {
     let now = Instant::now();
+    let prior_temp = if matches!(params.model.lesion, Lesion::None) {
+        2.0
+    } else {
+        1.0
+    };
     let mut search_time = 0.0;
     let mut top_n: TopN<Box<MetaProgramHypothesisWrapper>> = TopN::new(params.simulation.top_n);
     let timeout = params.simulation.timeout;
     let steps = params.simulation.steps;
     // TODO: hacked in constants.
-    let mpctl1 = MetaProgramControl::new(&[], &params.model, LearningMode::Refactor, 5.0, 7, 50);
-    let mpctl2 = MetaProgramControl::new(&[], &params.model, LearningMode::Sample, 5.0, 2, 22);
+    let mpctl1 = MetaProgramControl::new(&[], &params.model, LearningMode::Refactor, 5.0, 7, 66);
+    let mpctl2 = MetaProgramControl::new(&[], &params.model, LearningMode::Sample, 5.0, 2, 66);
     let mut t0 = TRS::new_unchecked(&lex, params.simulation.deterministic, background, vec![]);
     t0.set_bounds(params.simulation.lo, params.simulation.hi);
     t0.identify_symbols();
@@ -778,7 +783,6 @@ pub fn search_online<'ctx, 'b, R: Rng>(
     let h02 = MetaProgramHypothesis::new(mpctl2, &p0);
     let mut ctl = Control::new(0, 0, 0, 0, 0);
     let swap = 25000;
-    //let ladder = TemperatureLadder(vec![Temperature::new(2.0, 1.0)]);
     let ladder = TemperatureLadder(vec![
         Temperature::new(temp(0, 5, 1), temp(0, 5, 1)),
         Temperature::new(temp(1, 5, 1), temp(1, 5, 1)),
@@ -791,11 +795,34 @@ pub fn search_online<'ctx, 'b, R: Rng>(
     for (i, chain) in chain1.pool.iter_mut().enumerate() {
         chain.1.current_mut().birth.count = i;
         if params.simulation.verbose {
-            print_hypothesis_mcmc(problem, order, run, 0, chain.1.current(), true, None);
+            print_hypothesis_mcmc(
+                problem,
+                order,
+                run,
+                0,
+                chain.1.current(),
+                true,
+                None,
+                prior_temp,
+            );
         }
-        let score = -chain.1.current().at_temperature(Temperature::new(2.0, 1.0));
+        let score = -chain
+            .1
+            .current()
+            .at_temperature(Temperature::new(prior_temp, 1.0));
         reservoir.add(
-            || hypothesis_string_mcmc(problem, order, run, 0, chain.1.current(), true, None),
+            || {
+                hypothesis_string_mcmc(
+                    problem,
+                    order,
+                    run,
+                    0,
+                    chain.1.current(),
+                    true,
+                    None,
+                    prior_temp,
+                )
+            },
             rng,
         );
         top_n.add(ScoredItem {
@@ -807,11 +834,34 @@ pub fn search_online<'ctx, 'b, R: Rng>(
     for (i, chain) in chain2.pool.iter_mut().enumerate() {
         chain.1.current_mut().birth.count = i + chain1.pool.len();
         if params.simulation.verbose {
-            print_hypothesis_mcmc(problem, order, run, 0, chain.1.current(), true, None);
+            print_hypothesis_mcmc(
+                problem,
+                order,
+                run,
+                0,
+                chain.1.current(),
+                true,
+                None,
+                prior_temp,
+            );
         }
-        let score = -chain.1.current().at_temperature(Temperature::new(2.0, 1.0));
+        let score = -chain
+            .1
+            .current()
+            .at_temperature(Temperature::new(prior_temp, 1.0));
         reservoir.add(
-            || hypothesis_string_mcmc(problem, order, run, 0, chain.1.current(), true, None),
+            || {
+                hypothesis_string_mcmc(
+                    problem,
+                    order,
+                    run,
+                    0,
+                    chain.1.current(),
+                    true,
+                    None,
+                    prior_temp,
+                )
+            },
             rng,
         );
         top_n.add(ScoredItem {
@@ -837,6 +887,7 @@ pub fn search_online<'ctx, 'b, R: Rng>(
             &mut chain1,
             &mut top_n,
             LearningMode::Refactor,
+            prior_temp,
             &borrowed_data[n_data],
             params.simulation.top_n,
         );
@@ -844,15 +895,16 @@ pub fn search_online<'ctx, 'b, R: Rng>(
             &mut chain2,
             &mut top_n,
             LearningMode::Sample,
+            prior_temp,
             &borrowed_data[n_data],
             params.simulation.top_n,
         );
         let h_initial = &top_n.least().unwrap().data.0;
-        best = -h_initial.at_temperature(Temperature::new(2.0, 1.0));
+        best = -h_initial.at_temperature(Temperature::new(prior_temp, 1.0));
         writeln!(
             best_file,
             "{}",
-            hypothesis_string_mcmc(problem, order, run, n_data, h_initial, true, None)
+            hypothesis_string_mcmc(problem, order, run, n_data, h_initial, true, None, prior_temp)
         )
         .expect("written");
         for (i, chain) in chain1.pool.iter_mut().enumerate() {
@@ -890,20 +942,28 @@ pub fn search_online<'ctx, 'b, R: Rng>(
                 }
                 Some(sample) => {
                     if params.simulation.verbose {
-                        print_hypothesis_mcmc(problem, order, run, n_data, sample, true, None);
+                        print_hypothesis_mcmc(
+                            problem, order, run, n_data, sample, true, None, prior_temp,
+                        );
                     }
-                    let score = -sample.at_temperature(Temperature::new(2.0, 1.0));
+                    let score = -sample.at_temperature(Temperature::new(prior_temp, 1.0));
                     if score < best {
                         writeln!(
                             best_file,
                             "{}",
-                            hypothesis_string_mcmc(problem, order, run, n_data, sample, true, None)
+                            hypothesis_string_mcmc(
+                                problem, order, run, n_data, sample, true, None, prior_temp
+                            )
                         )
                         .expect("written");
                         best = score;
                     }
                     reservoir.add(
-                        || hypothesis_string_mcmc(problem, order, run, n_data, sample, true, None),
+                        || {
+                            hypothesis_string_mcmc(
+                                problem, order, run, n_data, sample, true, None, prior_temp,
+                            )
+                        },
                         rng,
                     );
                     top_n.add(ScoredItem {
@@ -929,7 +989,8 @@ pub fn search_online<'ctx, 'b, R: Rng>(
                 n_data,
                 &h_best,
                 true,
-                Some(correct as usize as f64)
+                Some(correct as usize as f64),
+                prior_temp
             )
         )
         .ok();
@@ -945,6 +1006,7 @@ pub fn search_online<'ctx, 'b, R: Rng>(
                 n_trials,
                 search_time,
                 now.elapsed().as_secs_f64(),
+                prior_temp,
             );
         }
     }
@@ -964,12 +1026,17 @@ pub fn search_batch<'ctx, 'b, R: Rng>(
     rng: &mut R,
 ) -> Result<f64, String> {
     let now = Instant::now();
+    let prior_temp = if matches!(params.model.lesion, Lesion::None) {
+        2.0
+    } else {
+        1.0
+    };
     let mut top_n: TopN<Box<MetaProgramHypothesisWrapper>> = TopN::new(params.simulation.top_n);
     let timeout = params.simulation.timeout;
     let steps = params.simulation.steps;
     // TODO: hacked in constants.
-    let mpctl1 = MetaProgramControl::new(&[], &params.model, LearningMode::Refactor, 5.0, 7, 50);
-    let mpctl2 = MetaProgramControl::new(&[], &params.model, LearningMode::Sample, 5.0, 2, 22);
+    let mpctl1 = MetaProgramControl::new(&[], &params.model, LearningMode::Refactor, 5.0, 7, 66);
+    let mpctl2 = MetaProgramControl::new(&[], &params.model, LearningMode::Sample, 5.0, 2, 66);
     let mut t0 = TRS::new_unchecked(&lex, params.simulation.deterministic, background, vec![]);
     t0.set_bounds(params.simulation.lo, params.simulation.hi);
     t0.identify_symbols();
@@ -990,11 +1057,34 @@ pub fn search_batch<'ctx, 'b, R: Rng>(
     for (i, chain) in chain1.pool.iter_mut().enumerate() {
         chain.1.current_mut().birth.count = i;
         if params.simulation.verbose {
-            print_hypothesis_mcmc(problem, order, run, 0, chain.1.current(), true, None);
+            print_hypothesis_mcmc(
+                problem,
+                order,
+                run,
+                0,
+                chain.1.current(),
+                true,
+                None,
+                prior_temp,
+            );
         }
-        let score = -chain.1.current().at_temperature(Temperature::new(2.0, 1.0));
+        let score = -chain
+            .1
+            .current()
+            .at_temperature(Temperature::new(prior_temp, 1.0));
         reservoir.add(
-            || hypothesis_string_mcmc(problem, order, run, 0, chain.1.current(), true, None),
+            || {
+                hypothesis_string_mcmc(
+                    problem,
+                    order,
+                    run,
+                    0,
+                    chain.1.current(),
+                    true,
+                    None,
+                    prior_temp,
+                )
+            },
             rng,
         );
         top_n.add(ScoredItem {
@@ -1006,11 +1096,34 @@ pub fn search_batch<'ctx, 'b, R: Rng>(
     for (i, chain) in chain2.pool.iter_mut().enumerate() {
         chain.1.current_mut().birth.count = i + chain1.pool.len();
         if params.simulation.verbose {
-            print_hypothesis_mcmc(problem, order, run, 0, chain.1.current(), true, None);
+            print_hypothesis_mcmc(
+                problem,
+                order,
+                run,
+                0,
+                chain.1.current(),
+                true,
+                None,
+                prior_temp,
+            );
         }
-        let score = -chain.1.current().at_temperature(Temperature::new(2.0, 1.0));
+        let score = -chain
+            .1
+            .current()
+            .at_temperature(Temperature::new(prior_temp, 1.0));
         reservoir.add(
-            || hypothesis_string_mcmc(problem, order, run, 0, chain.1.current(), true, None),
+            || {
+                hypothesis_string_mcmc(
+                    problem,
+                    order,
+                    run,
+                    0,
+                    chain.1.current(),
+                    true,
+                    None,
+                    prior_temp,
+                )
+            },
             rng,
         );
         top_n.add(ScoredItem {
@@ -1031,6 +1144,7 @@ pub fn search_batch<'ctx, 'b, R: Rng>(
         &mut chain1,
         &mut top_n,
         LearningMode::Refactor,
+        prior_temp,
         &borrowed_data,
         params.simulation.top_n,
     );
@@ -1038,15 +1152,16 @@ pub fn search_batch<'ctx, 'b, R: Rng>(
         &mut chain2,
         &mut top_n,
         LearningMode::Sample,
+        prior_temp,
         &borrowed_data,
         params.simulation.top_n,
     );
     let h_initial = &top_n.least().unwrap().data.0;
-    let mut best = -h_initial.at_temperature(Temperature::new(2.0, 1.0));
+    let mut best = -h_initial.at_temperature(Temperature::new(prior_temp, 1.0));
     writeln!(
         best_file,
         "{}",
-        hypothesis_string_mcmc(problem, order, run, n_data, h_initial, true, None)
+        hypothesis_string_mcmc(problem, order, run, n_data, h_initial, true, None, prior_temp)
     )
     .expect("written");
     for (i, chain) in chain1.pool.iter_mut().enumerate() {
@@ -1082,20 +1197,28 @@ pub fn search_batch<'ctx, 'b, R: Rng>(
             }
             Some(sample) => {
                 if params.simulation.verbose {
-                    print_hypothesis_mcmc(problem, order, run, n_data, sample, true, None);
+                    print_hypothesis_mcmc(
+                        problem, order, run, n_data, sample, true, None, prior_temp,
+                    );
                 }
-                let score = -sample.at_temperature(Temperature::new(2.0, 1.0));
+                let score = -sample.at_temperature(Temperature::new(prior_temp, 1.0));
                 if score < best {
                     writeln!(
                         best_file,
                         "{}",
-                        hypothesis_string_mcmc(problem, order, run, n_data, sample, true, None)
+                        hypothesis_string_mcmc(
+                            problem, order, run, n_data, sample, true, None, prior_temp
+                        )
                     )
                     .expect("written");
                     best = score;
                 }
                 reservoir.add(
-                    || hypothesis_string_mcmc(problem, order, run, n_data, sample, true, None),
+                    || {
+                        hypothesis_string_mcmc(
+                            problem, order, run, n_data, sample, true, None, prior_temp,
+                        )
+                    },
                     rng,
                 );
                 top_n.add(ScoredItem {
@@ -1119,6 +1242,7 @@ pub fn search_batch<'ctx, 'b, R: Rng>(
         1,
         search_time,
         now.elapsed().as_secs_f64(),
+        prior_temp,
     );
     let mut n_correct = 0;
     let mut n_tried = 0;
@@ -1138,7 +1262,8 @@ pub fn search_batch<'ctx, 'b, R: Rng>(
             n_data,
             &h_best,
             true,
-            Some(n_correct as f64 / n_tried as f64)
+            Some(n_correct as f64 / n_tried as f64),
+            prior_temp
         )
     )
     .ok();
@@ -1158,6 +1283,7 @@ fn summarize_search<'a, 'b>(
     n_trials: usize,
     search_time: f64,
     run_time: f64,
+    prior_temp: f64,
 ) {
     let best = &top_n.least().unwrap().data.0.state;
     notice("ending search", 0);
@@ -1167,7 +1293,7 @@ fn summarize_search<'a, 'b>(
         println!(
             "#   {}\t{}",
             i,
-            hypothesis_string_mcmc(problem, order, run, n_data, &h.data.0, true, None)
+            hypothesis_string_mcmc(problem, order, run, n_data, &h.data.0, true, None, prior_temp)
         )
     });
     println!("#");
@@ -1229,10 +1355,11 @@ fn print_hypothesis_mcmc(
     h: &MetaProgramHypothesis,
     print_meta: bool,
     correct: Option<f64>,
+    prior_temp: f64,
 ) {
     println!(
         "{}",
-        hypothesis_string_mcmc(problem, order, run, trial, h, print_meta, correct)
+        hypothesis_string_mcmc(problem, order, run, trial, h, print_meta, correct, prior_temp)
     );
 }
 
@@ -1244,6 +1371,7 @@ fn hypothesis_string_mcmc(
     h: &MetaProgramHypothesis,
     print_meta: bool,
     correct: Option<f64>,
+    prior_temp: f64,
 ) -> String {
     hypothesis_string_inner(
         problem,
@@ -1259,7 +1387,7 @@ fn hypothesis_string_mcmc(
             h.ln_trs,
             h.ln_wf,
             h.ln_acc,
-            h.at_temperature(Temperature::new(2.0, 1.0)),
+            h.at_temperature(Temperature::new(prior_temp, 1.0)),
         ],
         correct,
         print_meta,
@@ -1281,7 +1409,7 @@ fn hypothesis_string_inner(
 ) -> String {
     //let trs_str = trs.to_string().lines().join(" ");
     let trs_len = trs.size();
-    let objective_string = format!("{: >10.4}", objective.iter().format("\t"));
+    let objective_string = format!("{: >10.8}", objective.iter().format("\t"));
     let meta_string = format!("{}", moves.iter().format("."));
     let trs_string = format!("{}", trs).lines().join(" ");
     match (print_meta, correct) {
@@ -1335,6 +1463,7 @@ fn update_data_mcmc<'a, 'b>(
     chain: &mut ParallelTempering<MetaProgramHypothesis<'a, 'b>>,
     top_n: &mut TopN<Box<MetaProgramHypothesisWrapper<'a, 'b>>>,
     mode: LearningMode,
+    prior_temp: f64,
     data: &'b [&'b TRSDatum],
     prune_n: usize,
 ) {
@@ -1342,7 +1471,7 @@ fn update_data_mcmc<'a, 'b>(
     for mut h in std::mem::replace(top_n, TopN::new(prune_n)).to_vec() {
         h.data.0.ctl.data = data;
         h.data.0.compute_posterior(data, None);
-        h.score = -h.data.0.at_temperature(Temperature::new(2.0, 1.0));
+        h.score = -h.data.0.at_temperature(Temperature::new(prior_temp, 1.0));
         top_n.add(h);
     }
 

@@ -65,6 +65,8 @@ schedule = "None"
 # The prior is generative: sample the number of rules and then sample each rule up to that number.
 prior = { "SimpleGenerative" = { p_rule = 0.5, w_var = 5.0 } }
 
+lesion = "None"
+
 # The likelihood is generative: rewrite the observed input according to your
 # hypothesis and scale the probability of each computed output by the cost of
 # probabilistically corrupting it into the observed output.
@@ -81,4 +83,4 @@ p_observe = 0.0
 max_steps = 120
 max_depth = 0
 max_size = 200
-single = { "ListPrefix" = { p_add = 0.0001, p_del = 0.0001 } }
+single = { "ListPrefix" = { p_add = 1e-4, p_del = 1e-4 } }
