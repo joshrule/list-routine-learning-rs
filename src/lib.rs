@@ -784,11 +784,11 @@ pub fn search_online<'ctx, 'b, R: Rng>(
     let mut ctl = Control::new(0, 0, 0, 0, 0);
     let swap = 25000;
     let ladder = TemperatureLadder(vec![
-        Temperature::new(temp(0, 5, 1), temp(0, 5, 1)),
-        Temperature::new(temp(1, 5, 1), temp(1, 5, 1)),
-        Temperature::new(temp(2, 5, 1), temp(2, 5, 1)),
-        Temperature::new(temp(3, 5, 1), temp(3, 5, 1)),
-        Temperature::new(temp(4, 5, 1), temp(4, 5, 1)),
+        Temperature::new(prior_temp, temp(0, 5, 1)),
+        Temperature::new(prior_temp, temp(1, 5, 1)),
+        Temperature::new(prior_temp, temp(2, 5, 1)),
+        Temperature::new(prior_temp, temp(3, 5, 1)),
+        Temperature::new(prior_temp, temp(4, 5, 1)),
     ]);
     // All of the computational work pre-search is here.
     let mut chain1 = ParallelTempering::new(h01, &[], ladder.clone(), swap, rng);
@@ -910,12 +910,12 @@ pub fn search_online<'ctx, 'b, R: Rng>(
         for (i, chain) in chain1.pool.iter_mut().enumerate() {
             chain
                 .1
-                .set_temperature(Temperature::new(1.0, temp(i, 5, n_data + 1)));
+                .set_temperature(Temperature::new(prior_temp, temp(i, 5, n_data + 1)));
         }
         for (i, chain) in chain2.pool.iter_mut().enumerate() {
             chain
                 .1
-                .set_temperature(Temperature::new(1.0, temp(i, 5, n_data + 1)));
+                .set_temperature(Temperature::new(prior_temp, temp(i, 5, n_data + 1)));
         }
         ctl.extend_runtime(timeout * 1000);
         ctl.extend_steps(steps);
@@ -1046,11 +1046,11 @@ pub fn search_batch<'ctx, 'b, R: Rng>(
     let mut ctl = Control::new(steps, timeout * 1000, 0, 0, 0);
     let swap = 25000;
     let ladder = TemperatureLadder(vec![
-        Temperature::new(1.0, temp(0, 5, n_data + 1)),
-        Temperature::new(1.0, temp(1, 5, n_data + 1)),
-        Temperature::new(1.0, temp(2, 5, n_data + 1)),
-        Temperature::new(1.0, temp(3, 5, n_data + 1)),
-        Temperature::new(1.0, temp(4, 5, n_data + 1)),
+        Temperature::new(prior_temp, temp(0, 5, n_data + 1)),
+        Temperature::new(prior_temp, temp(1, 5, n_data + 1)),
+        Temperature::new(prior_temp, temp(2, 5, n_data + 1)),
+        Temperature::new(prior_temp, temp(3, 5, n_data + 1)),
+        Temperature::new(prior_temp, temp(4, 5, n_data + 1)),
     ]);
     // All of the computational work pre-search is here.
     let mut chain1 = ParallelTempering::new(h01, &[], ladder.clone(), swap, rng);
@@ -1167,12 +1167,12 @@ pub fn search_batch<'ctx, 'b, R: Rng>(
     for (i, chain) in chain1.pool.iter_mut().enumerate() {
         chain
             .1
-            .set_temperature(Temperature::new(1.0, temp(i, 5, n_data + 1)));
+            .set_temperature(Temperature::new(prior_temp, temp(i, 5, n_data + 1)));
     }
     for (i, chain) in chain2.pool.iter_mut().enumerate() {
         chain
             .1
-            .set_temperature(Temperature::new(1.0, temp(i, 5, n_data + 1)));
+            .set_temperature(Temperature::new(prior_temp, temp(i, 5, n_data + 1)));
     }
     let mut active_1 = params.simulation.p_refactor > 0.0;
     let mut active_2 = (1.0 - params.simulation.p_refactor) > 0.0;
