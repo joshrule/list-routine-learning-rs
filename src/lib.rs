@@ -2,7 +2,7 @@ use docopt::Docopt;
 use itertools::Itertools;
 use polytype::atype::TypeContext;
 use programinduction::{
-    hypotheses::{Bayesable, Temperable},
+    hypotheses::{Bayesable, Temperable, MCMCable},
     inference::{Control, ParallelTempering, TemperatureLadder},
     trs::{
         mcts::{MCTSObj, TRSMCTS},
@@ -890,6 +890,7 @@ pub fn search_online<'ctx, 'b, R: Rng>(
             prior_temp,
             &borrowed_data[n_data],
             params.simulation.top_n,
+            rng,
         );
         update_data_mcmc(
             &mut chain2,
@@ -898,6 +899,7 @@ pub fn search_online<'ctx, 'b, R: Rng>(
             prior_temp,
             &borrowed_data[n_data],
             params.simulation.top_n,
+            rng,
         );
         let h_initial = &top_n.least().unwrap().data.0;
         best = -h_initial.at_temperature(Temperature::new(prior_temp, 1.0));
@@ -1147,6 +1149,7 @@ pub fn search_batch<'ctx, 'b, R: Rng>(
         prior_temp,
         &borrowed_data,
         params.simulation.top_n,
+        rng,
     );
     update_data_mcmc(
         &mut chain2,
@@ -1155,6 +1158,7 @@ pub fn search_batch<'ctx, 'b, R: Rng>(
         prior_temp,
         &borrowed_data,
         params.simulation.top_n,
+        rng,
     );
     let h_initial = &top_n.least().unwrap().data.0;
     let mut best = -h_initial.at_temperature(Temperature::new(prior_temp, 1.0));
@@ -1459,20 +1463,28 @@ fn hypothesis_string_inner(
     }
 }
 
-fn update_data_mcmc<'a, 'b>(
+fn update_data_mcmc<'a, 'b, R: Rng>(
     chain: &mut ParallelTempering<MetaProgramHypothesis<'a, 'b>>,
     top_n: &mut TopN<Box<MetaProgramHypothesisWrapper<'a, 'b>>>,
     mode: LearningMode,
     prior_temp: f64,
     data: &'b [&'b TRSDatum],
     prune_n: usize,
+    rng: &mut R
 ) {
-    // 0. Update the top_n.
-    for mut h in std::mem::replace(top_n, TopN::new(prune_n)).to_vec() {
-        h.data.0.ctl.data = data;
-        h.data.0.compute_posterior(data, None);
-        h.score = -h.data.0.at_temperature(Temperature::new(prior_temp, 1.0));
-        top_n.add(h);
+    // 0. Update the top_n by reconstructing each hypothesis.
+    for h in std::mem::replace(top_n, TopN::new(prune_n)).to_vec() {
+        let mut ctl = h.data.0.ctl;
+        ctl.data = data;
+        let mut h = MetaProgramHypothesis::new(ctl, &h.data.0.state.path); 
+        if h.state.label != StateLabel::Failed {
+            h.compute_posterior(data, None);
+            let score = -h.at_temperature(Temperature::new(prior_temp, 1.0));
+            top_n.add(ScoredItem {
+                score,
+                data: Box::new(MetaProgramHypothesisWrapper(h)),
+            });
+        }
     }
 
     // 1. Update the chain.
@@ -1497,10 +1509,20 @@ fn update_data_mcmc<'a, 'b>(
                     thread.current_mut().clone_from(&best.data.0);
                 }
             }
+            // If we can't find anything good, let's just restart.
             None => {
                 chain.set_data(data, true);
                 for (_, thread) in chain.pool.iter_mut() {
                     thread.current_mut().ctl.data = data;
+                    let h = thread.current_mut().restart(rng);
+                    *thread.current_mut() = h;
+                    let h = thread.current_mut();
+                    h.compute_posterior(data, None);
+                    let score = -h.at_temperature(Temperature::new(prior_temp, 1.0));
+                    top_n.add(ScoredItem {
+                        score,
+                        data: Box::new(MetaProgramHypothesisWrapper(h.clone())),
+                    });
                 }
             }
         }
